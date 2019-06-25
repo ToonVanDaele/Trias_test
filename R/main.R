@@ -31,7 +31,7 @@ df_out <- df_spe %>%
   map(.f = spDT)
 
 # Select only the em output for each taxonKey & eyear
-temp <- df_out %>%  map_dfr(c(2))
+temp <- df_out %>%  map_dfr(c("em"))
 
 df_result <- df_sp %>%
   left_join(temp, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
@@ -64,7 +64,7 @@ df_outGAM <- df_spe %>%
   map(.f = spGAM)
 
 # Select only the em output for each taxonKey & eyear
-temp <- df_outGAM %>%  map_dfr(c(2))
+temp <- df_outGAM %>%  map_dfr(c("em"))
 
 df_resultGAM <- df_sp %>%
   left_join(temp, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
@@ -75,13 +75,19 @@ plot_emGAM <- df_resultGAM %>%
 
 
 
+t <- spGAM(filter(df_sp, taxonKey == "8193935"))
 
+draw(t$model)
+appraise(t$model)
+summary(t$model)
 
+draw(t$deriv1)
+draw(t$deriv2)
 
+tail(t$deriv1)
+tail(t$deriv2)
+t$em
 
-#spPR(df_sp)
-#spINLA(df_sp)
-#spGAM(df_sp)
 
 # Output
 

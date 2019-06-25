@@ -50,7 +50,8 @@ spGAM <- function(df) {
 
     }
   df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, em = out)
-  return(list(df = df_n, em = df_em))
+  return(list(df = df_n, em = df_em, model = g1, df_n = df_n,
+              deriv1 = deriv1, deriv2 = deriv2))
 }
 
 
