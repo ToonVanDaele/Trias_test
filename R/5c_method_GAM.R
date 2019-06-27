@@ -8,7 +8,7 @@ spGAM <- function(df) {
   fyear <- min(df$year) # First year
   lyear <- max(df$year) # Last year
   spec <- df[[1,1]]     # species name (taxonKey)
-
+  print(paste0(spec, "_", lyear)
   # Check minimum 5 values > 0
   if (df %>%
     filter(ncells > 0) %>%
@@ -49,8 +49,8 @@ spGAM <- function(df) {
     df$fit <- df$ucl <- df$lcl <- out <- NA
 
     }
-  df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, em = out)
-  return(list(df = df_n, em = df_em, model = g1, df_n = df_n,
+  df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = "GAM", em = out)
+  return(list(df = df, em = df_em, model = g1, df_n = df_n,
               deriv1 = deriv1, deriv2 = deriv2))
 }
 

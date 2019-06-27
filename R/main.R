@@ -53,7 +53,7 @@ df_pr_out <- df_sp %>%
 
 # Using GAM
 
-# Complete time series
+# Complete time series only
 df_pr_out <- df_sp %>%
   group_split(taxonKey) %>%
   map(.f = spGAM)
@@ -63,7 +63,11 @@ df_outGAM <- df_spe %>%
   group_split(taxonKey, eyear) %>%
   map(.f = spGAM)
 
-# Select only the em output for each taxonKey & eyear
+
+# ? Why are the times series only up to 2016 and not 2017??
+
+
+# Retrieve the em output for each taxonKey & eyear combination
 temp <- df_outGAM %>%  map_dfr(c("em"))
 
 df_resultGAM <- df_sp %>%
