@@ -8,14 +8,14 @@ spGAM <- function(df) {
   fyear <- min(df$year) # First year
   lyear <- max(df$year) # Last year
   spec <- df[[1,1]]     # species name (taxonKey)
-  print(paste0(spec, "_", lyear)
+  print(paste0(spec, "_", lyear))
   # Check minimum 5 values > 0
   if (df %>%
     filter(ncells > 0) %>%
     count() %>% pull() >= 5) {
 
     # Gam model
-    g1 <- gam(ncells ~ s(year, k = 5, m =4), family = nb(), data = df, method = "REML")
+    g1 <- gam(ncells ~ s(year, k = 10, m =4), family = nb(), data = df, method = "REML")
     #draw(g1)  #appraise(g1)
 
     # Predict to new data (200 values between first and last year)
@@ -37,8 +37,8 @@ spGAM <- function(df) {
     df_n <- bind_cols(df_n, em)
 
     # Create plot with conf. interval + colour for emerging status
-    ptitle <- paste0("GAM/", spec, "_", lyear)
-    plot_ribbon_em(df_n, df, ptitle, printplot = FALSE)
+    #ptitle <- paste0("GAM/", spec, "_", lyear)
+    #plot_ribbon_em(df_n, df, ptitle, printplot = FALSE)
 
     # Save emerging status of the last year
     out <- em %>%

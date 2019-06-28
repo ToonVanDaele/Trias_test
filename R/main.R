@@ -41,38 +41,98 @@ plot_em <- df_result %>%
   group_map(~tibble(plots = list(plot_incr_em(.x, spec = .y, printplot = TRUE))))
 
 
-# Run methods
+##### Run the different methods
+
+## Decision tree (no statistics)
 df_dt_out <- df_sp %>%
   group_split(taxonKey) %>%
   map(.f = spDT)
 
-df_pr_out <- df_sp %>%
+
+## Piecewise regresion
+# Complete time series
+PR_result <- df_sp %>%
   group_split(taxonKey) %>%
   map(.f = spPR)
 
+# Plot results and save
+for (i in PR_result) {
+  df <- i$df
+  df_n <- i$df_n
+  ptitle <- paste0("PR/", df[[1,1]], "_", max(df$year))
+  if (!is.null(df_n)) {
+    plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = TRUE)
+  }else{
+    plot_ts(df = df, ptitle = ptitle, printplot = TRUE)
+  }
+}
 
-# Using GAM
+# Incrementing time series
+df_outPR <- df_spe %>%
+  group_split(taxonKey, eyear) %>%
+  map(.f = spPR)
+
+# Plot results and save
+for (i in df_outPR) {
+  df <- i$df
+  df_n <- i$df_n
+  ptitle <- paste0("PR/", df[[1,1]], "_", max(df$year))
+  if (!is.null(df_n)) {
+    plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = FALSE)
+  }else{
+    plot_ts(df = df, ptitle = ptitle, printplot = FALSE)
+  }
+}
+
+
+## GAM
 
 # Complete time series only
-df_pr_out <- df_sp %>%
+GAM_result <- df_sp %>%
   group_split(taxonKey) %>%
   map(.f = spGAM)
+
+# Plot results and save
+for (i in GAM_result){
+  df <- i$df
+  df_n <- i$df_n
+  df_n$ucl[df_n$ucl > 10000] <- 10000
+  df_n$lcl[df_n$lcl > 10000] <- 10000
+  ptitle <- paste0("GAM/", df[[1,1]], "_", max(df$year))
+  plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = TRUE)
+}
 
 # Incrementing time series
 df_outGAM <- df_spe %>%
   group_split(taxonKey, eyear) %>%
   map(.f = spGAM)
 
+for (i in df_outGAM){
+  df <- i$df
+  df_n <- i$df_n
+  df_n$ucl[df_n$ucl > 10000] <- 10000
+  df_n$lcl[df_n$lcl > 10000] <- 10000
+  ptitle <- paste0("GAM/", df[[1,1]], "_", max(df$year))
+  plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = TRUE)
+}
 
-# ? Why are the times series only up to 2016 and not 2017??
 
+# ? Why are the times series plots only up to 2016 and not 2017??
 
-# Retrieve the em output for each taxonKey & eyear combination
-temp <- df_outGAM %>%  map_dfr(c("em"))
+# Retrieve and combine the em result for each method, taxonKey & eyear combination
+emGAM <- df_outGAM %>%  map_dfr(c("em")) %>%
+emPR <-  df_outPR %>% map_dfr(c("em"))
 
-df_resultGAM <- df_sp %>%
-  left_join(temp, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
+df_main <- df_sp %>%
+  left_join(emGAM %>% rename(gam = em), by = c("taxonKey" = "taxonKey", "year" = "eyear")) %>%
+  left_join(emPR %>%
+              rename(pr = em) %>%
+              dplyr::select(-method_em),  by = c("taxonKey" = "taxonKey", "year" = "eyear"))
 
+df_main <- df_main %>%
+  gather(key = method_em, value = em, -taxonKey, -year, -ncells)
+
+# Plot (only GAM for the moment)
 plot_emGAM <- df_resultGAM %>%
   group_by(taxonKey) %>%
   group_map(~tibble(plots = list(plot_incr_em5(.x, spec = .y, printplot = TRUE))))
@@ -93,11 +153,18 @@ tail(t$deriv2)
 t$em
 
 
+tpr <- spPR(df = df)
+tgam <- spGAM(df = df)
+
+ptitle <- paste0(df[[1,1]])
+plot_ribbon_em(df_n = tpr[["df_n"]], df = tpr[["df"]], ptitle = ptitle, printplot = TRUE)
+plot_ribbon_em(df_n = tgam[["df_n"]], df = tgam[["df"]], ptitle = ptitle, printplot = TRUE)
+
 # Output
 
 #def emerging
 #- absoluut aantal
-#- relatief aantal (eerste afgeleide)
+#- relatief aantal (eerste en tweede afgeleide)
 
 # Korte termijn eerste afgeleide,
 # langere termijn PR lineaire regressie coefficient verschillend van 0
@@ -108,3 +175,6 @@ t$em
 # Uitwerking PR -> voorbeeld emerging / not emering + probleem
 
 # Uitwerking in INLA -> RW2 + eerste afgeleide als emerging
+
+
+

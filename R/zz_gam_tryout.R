@@ -1,11 +1,14 @@
 ### GAM tryout
 
+library(gratia)
+
 specid <- "2706501"
 specid <- "3026004"
 specid <- "8193935"
 
 df <- filter(df_sp, taxonKey == specid)
 
+lyear <- max(df$year)
 #df$ncells <- df$ncells / 10000
 
 #g1 <- gam(ncells ~ s(year), family = poisson, data = df)

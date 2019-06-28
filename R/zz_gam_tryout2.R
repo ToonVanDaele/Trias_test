@@ -2,7 +2,7 @@
 
 library(gratia)
 
-specid <- "2706501"
+#specid <- "2706501"
 specid <- "3026004"
 specid <- "8193935"
 specid <- "4314683"

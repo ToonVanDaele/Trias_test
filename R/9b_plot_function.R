@@ -42,7 +42,7 @@ plot_ribbon <- function(df_n, df, ptitle, printplot = FALSE){
 
 plot_ribbon_em <- function(df_n, df, ptitle, printplot = FALSE){
 
-  g <- ggplot(df_n, aes(x = year, y = fit)) + geom_point(aes(colour = em), size = 2) +
+  g <- ggplot(df_n, aes(x = year, y = fit)) + geom_point(aes(colour = as.factor(em)), size = 2) +
     geom_ribbon(aes(ymax = ucl, ymin = lcl),
                 fill = grey(0.5),
                 alpha = 0.4) +

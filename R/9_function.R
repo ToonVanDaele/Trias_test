@@ -9,14 +9,14 @@ em_level <- function(df1, df2){
       .$lower < 0  & .$upper < 0 ~ "-1",
       .$lower < 0  & .$upper > 0 ~ "0",
       .$lower > 0  & .$upper > 0 ~ "1")) %>%
-    select(year = data, em1)
+    dplyr::select(year = data, em1)
 
   em2 <- df2 %>%
     mutate(em2 = case_when(
       .$lower < 0  & .$upper < 0 ~ "-1",
       .$lower < 0  & .$upper > 0 ~ "0",
       .$lower > 0  & .$upper > 0 ~ "1")) %>%
-    select(year = data, em2)
+    dplyr::select(year = data, em2)
 
   em <- bind_cols(em1, em2) %>%
     mutate(em = case_when(
@@ -29,7 +29,7 @@ em_level <- function(df1, df2){
       em1 == -1  & em2 == 1  ~  "-2",
       em1 == -1  & em2 == 0  ~  "-3",
       em1 == -1  & em2 == -1  ~ "-3")) %>%
-    select(-year1)
+    dplyr::select(-year1)
   return(em)
 
 }
