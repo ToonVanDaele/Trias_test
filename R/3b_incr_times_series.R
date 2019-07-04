@@ -1,20 +1,22 @@
 # Increasing time series
+#
+# backward argument indicates how many timesteps
+#
+# The time series in df is duplicated with increasing length
 
-# For each time series in the data frame
-# duplicate the time series with increasing length
-# This is for testing purpose.
-# Verify how the algoritm behaves with increasing length of time series.
+# This allows to verify how the algoritm behaves with increasing length of time series.
 
-# Create time series for each evaluation year
+# Value
+# eyear = evaluation year (the last year of each time series)
 
-incrts <- function(df){
+incrts <- function(df, backward = 5){
 
-  #eval_year <- 2017
-  eval_year <- c(seq(from = 1900, to = 2017, by = 1))
+  lyear <- max(df$year)
+
+  eval_year <- c(seq(from = lyear - backward, to = lyear, by = 1))
 
   df_temp <- expand.grid(taxonKey = unique(df$taxonKey),
                          eval_year = eval_year)
-
 
   filter_year <- function(eyear, tK, df){
     df_out <- df %>%
@@ -24,7 +26,6 @@ incrts <- function(df){
     }
     return(df_out)
   }
-
 
   t <- map2_dfr(.x = df_temp$eval_year,
                 .y = df_temp$taxonKey,

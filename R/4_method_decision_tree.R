@@ -34,6 +34,7 @@ spDT <- function(df){
   }
   df$fit <- df$ucl <- df$lcl <- NA  # decision has no fit, ucl or lcl
   df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, em = out)
-  return(list(df = df, em = df_em))
+  outlist <- list(df = df, em = df_em)
+  return(outlist)
 }
 

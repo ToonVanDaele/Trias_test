@@ -10,7 +10,7 @@ selspec <- function(df_pp){
 
   # Return a sample selection of the species
 
-  set.seed(23)
+  set.seed(55)
   #sp <- sample(x = speclist, size = 1)
   sp <- c("2927305")
   sp <- c("3053406")

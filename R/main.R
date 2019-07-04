@@ -2,6 +2,14 @@
 
 # Init
 library(tidyverse)
+source(file = "./R/2_preproces_data.R")
+source(file = "./R/3_select_species.R")
+source(file = "./R/3b_incr_times_series.R")
+source(file = "./R/4_method_decision_tree.R")
+source(file = "./R/5a_method_piecewise_regression.R")
+source(file = "./R/5c_method_GAM.R")
+source(file = "./R/9_function.R")
+source(file = "./R/9b_plot_function.R")
 
 # Get data
 df_in <- readRDS(file = "./data/cube_belgium.RDS")
@@ -12,41 +20,42 @@ df_pp <- preproc(df_in)
 # Select species
 # (Mainly for testing)
 df_sp <- selspec(df_pp)
-length(unique(df_sp$taxonKey))
+unique(df_sp$taxonKey)
 
 # plot time series
 g <- df_sp %>%
   group_split(taxonKey) %>%
-  map(.f = plot_ts, printplot = FALSE)
+  map(.f = plot_ts, printplot = FALSE, saveplot = FALSE)
 
-# return van plot_ts aanpassen. Geeft nu NULL terug
+#plot(g[[1]])
 
 # Create increasing time series (for testing)
-df_spe <- incrts(df_sp)
-
-# Method: decision tree
-# For each unique species & evaluation year in df_sp
-df_out <- df_spe %>%
-  group_split(taxonKey, eyear) %>%
-  map(.f = spDT)
-
-# Select only the em output for each taxonKey & eyear
-temp <- df_out %>%  map_dfr(c("em"))
-
-df_result <- df_sp %>%
-  left_join(temp, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
-
-plot_em <- df_result %>%
-  group_by(taxonKey) %>%
-  group_map(~tibble(plots = list(plot_incr_em(.x, spec = .y, printplot = TRUE))))
-
+df_spe <- incrts(df_sp, backward = 5)
 
 ##### Run the different methods
 
 ## Decision tree (no statistics)
-df_dt_out <- df_sp %>%
+# on full time series
+dt_result <- df_sp %>%
   group_split(taxonKey) %>%
   map(.f = spDT)
+
+# on increasing time series (unique species & evaluation year)
+dt_result_incr <- df_spe %>%
+  group_split(taxonKey, eyear) %>%
+  map(.f = spDT)
+
+# Select only the em output for each taxonKey & eyear
+dt_em <- dt_result_incr %>%  map_dfr(c("em"))
+
+dt_result <- df_sp %>%
+  left_join(dt_em, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
+
+dt_em_plot <- dt_result %>%
+  group_split(taxonKey) %>%
+  map(.f = plot_incr_em)
+
+#plot(dt_em_plot[[1]])
 
 
 ## Piecewise regresion
@@ -87,19 +96,21 @@ for (i in df_outPR) {
 
 ## GAM
 
-# Complete time series only
+# GAM on full time series
 GAM_result <- df_sp %>%
   group_split(taxonKey) %>%
   map(.f = spGAM)
 
 # Plot results and save
 for (i in GAM_result){
-  df <- i$df
-  df_n <- i$df_n
-  df_n$ucl[df_n$ucl > 10000] <- 10000
-  df_n$lcl[df_n$lcl > 10000] <- 10000
-  ptitle <- paste0("GAM/", df[[1,1]], "_", max(df$year))
-  plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = TRUE)
+  if (!is.null(i$df_n)){
+    df <- i$df
+    df_n <- i$df_n
+    df_n$ucl[df_n$ucl > 10000] <- 10000
+    df_n$lcl[df_n$lcl > 10000] <- 10000
+    ptitle <- paste0("GAM/", df[[1,1]], "_", max(df$year))
+    plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = TRUE)
+  }
 }
 
 # Incrementing time series
@@ -108,29 +119,38 @@ df_outGAM <- df_spe %>%
   map(.f = spGAM)
 
 for (i in df_outGAM){
-  df <- i$df
-  df_n <- i$df_n
-  df_n$ucl[df_n$ucl > 10000] <- 10000
-  df_n$lcl[df_n$lcl > 10000] <- 10000
-  ptitle <- paste0("GAM/", df[[1,1]], "_", max(df$year))
-  plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = TRUE)
+  if (!is.null(i$df_n)){
+    df <- i$df
+    df_n <- i$df_n
+    df_n$ucl[df_n$ucl > 10000] <- 10000
+    df_n$lcl[df_n$lcl > 10000] <- 10000
+    ptitle <- paste0("GAM/", df[[1,1]], "_", max(df$year))
+    plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = FALSE)
+  }
 }
 
 
 # ? Why are the times series plots only up to 2016 and not 2017??
 
+### Join outputs from different methods
+
 # Retrieve and combine the em result for each method, taxonKey & eyear combination
-emGAM <- df_outGAM %>%  map_dfr(c("em")) %>%
+emDT <- df_outDT %>%  map_dfr(c("em"))
+emGAM <- df_outGAM %>%  map_dfr(c("em"))
 emPR <-  df_outPR %>% map_dfr(c("em"))
 
 df_main <- df_sp %>%
-  left_join(emGAM %>% rename(gam = em), by = c("taxonKey" = "taxonKey", "year" = "eyear")) %>%
+  left_join(emGAM %>%
+              rename(gam = em) %>%
+              dplyr::select(-method_em), by = c("taxonKey" = "taxonKey", "year" = "eyear")) %>%
   left_join(emPR %>%
               rename(pr = em) %>%
               dplyr::select(-method_em),  by = c("taxonKey" = "taxonKey", "year" = "eyear"))
 
 df_main <- df_main %>%
   gather(key = method_em, value = em, -taxonKey, -year, -ncells)
+
+df_main
 
 # Plot (only GAM for the moment)
 plot_emGAM <- df_resultGAM %>%
@@ -139,7 +159,11 @@ plot_emGAM <- df_resultGAM %>%
 
 
 
-t <- spGAM(filter(df_sp, taxonKey == "8193935"))
+
+
+df <- filter(df_sp, taxonKey == "7068379")
+
+t <- spGAM(df)
 
 draw(t$model)
 appraise(t$model)
@@ -154,12 +178,21 @@ t$em
 
 
 tpr <- spPR(df = df)
+
+df <- filter(df_pp, taxonKey == "2882849")
+plot_ts(df, printplot = TRUE)
 tgam <- spGAM(df = df)
 
+
+tpr <- spPR(df = df)
+tpr$df_n
+
 ptitle <- paste0(df[[1,1]])
-plot_ribbon_em(df_n = tpr[["df_n"]], df = tpr[["df"]], ptitle = ptitle, printplot = TRUE)
 plot_ribbon_em(df_n = tgam[["df_n"]], df = tgam[["df"]], ptitle = ptitle, printplot = TRUE)
 
+plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = TRUE)
+
+plot_ribbon_em(df_n = tpr[["df_n"]], df = tpr[["df"]], ptitle = ptitle, printplot = TRUE)
 # Output
 
 #def emerging
@@ -178,3 +211,6 @@ plot_ribbon_em(df_n = tgam[["df_n"]], df = tgam[["df"]], ptitle = ptitle, printp
 
 
 
+3084015
+
+df_outGAM[[222]]$df

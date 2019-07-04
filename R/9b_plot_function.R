@@ -6,20 +6,19 @@
 # input df
 # year, ncells
 
-plot_ts <- function(df, ptitle = NULL, printplot = FALSE){
+plot_ts <- function(df, ptitle = NULL, printplot = FALSE, saveplot = FALSE){
 
   spec <- df[[1,1]]
   lyear <- max(df$year)
 
-  if (is.null(ptitle)){ptitle <- paste0(spec, "_", lyear)}
+  if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
 
   g <- ggplot(df, aes(x = year, y = ncells)) + geom_line(colour = "grey") +
     geom_point() + ggtitle(ptitle)
 
-  ggsave(filename = paste0("./output/", ptitle, ".png"), g)
+  if (saveplot == TRUE) {ggsave(filename = paste0("./output/ts/", ptitle, ".png"), g)}
   if (printplot == TRUE) plot(g)
-  #return(g)
-  #return(NULL)
+  return(g)
 }
 
  ### Plot time series with confidence limits
@@ -40,7 +39,12 @@ plot_ribbon <- function(df_n, df, ptitle, printplot = FALSE){
 
 ### Plot time series with confidence limits + emerging status
 
-plot_ribbon_em <- function(df_n, df, ptitle, printplot = FALSE){
+plot_ribbon_em <- function(df_n, df, ptitle = NULL,
+                           printplot = FALSE, saveplot = FALSE){
+
+  spec <- df[[1, "taxonKey"]]
+  lyear <- max(df$year)
+  if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
 
   g <- ggplot(df_n, aes(x = year, y = fit)) + geom_point(aes(colour = as.factor(em)), size = 2) +
     geom_ribbon(aes(ymax = ucl, ymin = lcl),
@@ -52,7 +56,7 @@ plot_ribbon_em <- function(df_n, df, ptitle, printplot = FALSE){
                                    "-2" = "green", "-3" = "dark green")) +
     ggtitle(ptitle)
 
-  ggsave(filename = paste0("./output/", ptitle, ".png"), g)
+  if (saveplot == TRUE) ggsave(filename = paste0("./output/", ptitle, ".png"), g)
   if (printplot == TRUE) plot(g)
 }
 
@@ -63,20 +67,21 @@ plot_ribbon_em <- function(df_n, df, ptitle, printplot = FALSE){
 # input df
 # year, ncells, em
 
-plot_incr_em <- function(df, spec, printplot = FALSE) {
+plot_incr_em <- function(df, ptitle = NULL, printplot = FALSE, saveplot = FALSE) {
 
-  #spec <- as.character(df[1,"taxonKey"])
+  spec <- df[[1,"taxonKey"]]
   lyear <- max(df$year)
-  mncells <- filter(df, year == lyear) %>% .$ncells
+  if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
 
   g <- ggplot(df, aes(x = year, y = ncells, colour = em)) + geom_point() +
       geom_line(colour = "grey") +
       scale_color_manual(values = c("dark green", "dark red")) +
-      ggtitle(paste0(spec, "_", lyear, "_", mncells))
+      ggtitle(ptitle)
 
-  ggsave(filename = paste0("./output/figures/", spec, "_", lyear, ".png"), g)
+  if (saveplot == TRUE) {ggsave(filename = paste0("./output/incr_em/",
+                                                  ptitle, ".png"), g)}
   if (printplot == TRUE) plot(g)
-
+  return(g)
 }
 
 # Plot incrementing time series with 5 emerging status levels
