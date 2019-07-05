@@ -12,8 +12,8 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
 
   result <- try({
 
-    maxk <- max(round((lyear - fyear) / 10, 0), 3)  # 1 knot per decade
-    mvalue <- min(maxk - 1, 2)
+    maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade
+    mvalue <- min(maxk - 1, 3)
     g1 <- gam(ncells ~ s(year, k = maxk, m = mvalue, bs = "ts"), family = nb(),
               data = df, method = "REML")
     #draw(g1)  #appraise(g1)
@@ -53,13 +53,13 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
 
   if (class(result) == "try-error") {
     df$fit <- df$ucl <- df$lcl <- out <- NA
-    g1 <- df_n <- NULL
+    g1 <- df_n <- g <- NULL
     deriv1 <- deriv2 <- NULL
   }
 
   df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = "GAM", em = out)
   return(list(df = df, em = df_em, model = g1, df_n = df_n,
-              deriv1 = deriv1, deriv2 = deriv2, plot = g))
+              deriv1 = deriv1, deriv2 = deriv2, plot = g, result = result))
 }
 
 

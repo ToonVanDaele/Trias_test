@@ -16,7 +16,7 @@ selspec <- function(df_pp){
   sp <- c("3053406")
   sp <- c("2867614")
   #sp <- c("2882849")
-  sp <- sample(x = speclist, size = 20)
+  sp <- sample(x = speclist, size = 200)
 
   df_sp <- df_pp %>%
     filter(taxonKey %in% sp)

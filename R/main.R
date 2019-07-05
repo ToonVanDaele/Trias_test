@@ -112,7 +112,7 @@ for (i in df_outPR) {
 # GAM on full time series
 gam_result <- df_sp %>%
   group_split() %>%
-  map(.f = spGAM, saveplot = FALSE) %>%
+  map(.f = spGAM, saveplot = TRUE) %>%
   set_names(taxl)
 
 # Plot results
@@ -135,8 +135,8 @@ gam_main <- df_sp %>%
   left_join(emGAM, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
 
 plot_emGAM <- gam_main %>%
-  group_split(taxonKey) %>%
-  map(plot_incr_em5)
+  group_split() %>%
+  map(plot_incr_em5, saveplot = TRUE)
 
 
 
@@ -215,21 +215,8 @@ plot_ribbon_em(df_n = tpr[["df_n"]], df = tpr[["df"]], ptitle = ptitle, printplo
 # Uitwerking in INLA -> RW2 + eerste afgeleide als emerging
 
 
-a <- list(x = c(4,5,6),
-          y = c(7,8,9))
+# Test decision rules
 
-b <- list(p = c(1,2,3),
-          q = c(4,5,6))
+df <- data.frame(taxonKey = "001", year = c(1990, 1991, 1992), ncells = c(1,1,0))
+spDT(df)
 
-
-t <- list(a, b)
-
-tt <- set_names(x = t, nm = c("first", "second"))
-
-
-tt["first"]
-tt[["first"]]$x
-
-taxl <- df_sp %>%
-  group_keys() %>%
-  pull(taxonKey)
