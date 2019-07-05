@@ -21,9 +21,7 @@ incrts <- function(df, backward = 5){
   filter_year <- function(eyear, tK, df){
     df_out <- df %>%
       filter(taxonKey == tK & year <= eyear)
-    if (nrow(df_out) > 0) {
-      df_out <- cbind(df_out, eyear)
-    }
+    if (nrow(df_out) > 0) df_out$eyear <- eyear
     return(df_out)
   }
 

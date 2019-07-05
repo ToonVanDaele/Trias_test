@@ -19,8 +19,13 @@ df_pp <- preproc(df_in)
 
 # Select species
 # (Mainly for testing)
-df_sp <- selspec(df_pp)
-unique(df_sp$taxonKey)
+df_sp <- selspec(df_pp) %>%
+  group_by(taxonKey)
+
+# Get a vector with the group names
+taxl <- df_sp %>%
+  group_keys() %>%
+  pull(taxonKey)
 
 # plot time series
 g <- df_sp %>%
@@ -30,7 +35,15 @@ g <- df_sp %>%
 #plot(g[[1]])
 
 # Create increasing time series (for testing)
-df_spe <- incrts(df_sp, backward = 5)
+df_spe <- incrts(df_sp, backward = 5) %>%
+  group_by(taxonKey, eyear)
+
+# Retrieve a vector with grouping key (used to name the output list later)
+taxl_incr <- df_spe %>%
+  group_keys() %>%
+  mutate(key = paste(taxonKey, eyear, sep = "_")) %>%
+  pull(key)
+
 
 ##### Run the different methods
 
@@ -97,46 +110,41 @@ for (i in df_outPR) {
 ## GAM
 
 # GAM on full time series
-GAM_result <- df_sp %>%
-  group_split(taxonKey) %>%
-  map(.f = spGAM)
+gam_result <- df_sp %>%
+  group_split() %>%
+  map(.f = spGAM, saveplot = FALSE) %>%
+  set_names(taxl)
 
-# Plot results and save
-for (i in GAM_result){
-  if (!is.null(i$df_n)){
-    df <- i$df
-    df_n <- i$df_n
-    df_n$ucl[df_n$ucl > 10000] <- 10000
-    df_n$lcl[df_n$lcl > 10000] <- 10000
-    ptitle <- paste0("GAM/", df[[1,1]], "_", max(df$year))
-    plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = TRUE)
-  }
+# Plot results
+for (i in gam_result) {
+  if (!is.null(i$plot)) plot(i$plot)
 }
 
 # Incrementing time series
-df_outGAM <- df_spe %>%
-  group_split(taxonKey, eyear) %>%
-  map(.f = spGAM)
+# get a vector with the group keys
+df_spe <- group_by(df_spe, taxonKey, eyear)
 
-for (i in df_outGAM){
-  if (!is.null(i$df_n)){
-    df <- i$df
-    df_n <- i$df_n
-    df_n$ucl[df_n$ucl > 10000] <- 10000
-    df_n$lcl[df_n$lcl > 10000] <- 10000
-    ptitle <- paste0("GAM/", df[[1,1]], "_", max(df$year))
-    plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = FALSE)
-  }
-}
+gam_result_incr <- df_spe %>%
+  group_split() %>%
+  map(.f = spGAM, saveplot = FALSE) %>%
+  set_names(taxl_incr)
+
+# Plot em status for increasing time series
+emGAM <- gam_result_incr %>%  map_dfr(c("em"))
+gam_main <- df_sp %>%
+  left_join(emGAM, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
+
+plot_emGAM <- gam_main %>%
+  group_split(taxonKey) %>%
+  map(plot_incr_em5)
 
 
-# ? Why are the times series plots only up to 2016 and not 2017??
 
 ### Join outputs from different methods
 
 # Retrieve and combine the em result for each method, taxonKey & eyear combination
 emDT <- df_outDT %>%  map_dfr(c("em"))
-emGAM <- df_outGAM %>%  map_dfr(c("em"))
+emGAM <- gam_result_incr %>%  map_dfr(c("em"))
 emPR <-  df_outPR %>% map_dfr(c("em"))
 
 df_main <- df_sp %>%
@@ -152,10 +160,7 @@ df_main <- df_main %>%
 
 df_main
 
-# Plot (only GAM for the moment)
-plot_emGAM <- df_resultGAM %>%
-  group_by(taxonKey) %>%
-  group_map(~tibble(plots = list(plot_incr_em5(.x, spec = .y, printplot = TRUE))))
+
 
 
 
@@ -210,7 +215,21 @@ plot_ribbon_em(df_n = tpr[["df_n"]], df = tpr[["df"]], ptitle = ptitle, printplo
 # Uitwerking in INLA -> RW2 + eerste afgeleide als emerging
 
 
+a <- list(x = c(4,5,6),
+          y = c(7,8,9))
 
-3084015
+b <- list(p = c(1,2,3),
+          q = c(4,5,6))
 
-df_outGAM[[222]]$df
+
+t <- list(a, b)
+
+tt <- set_names(x = t, nm = c("first", "second"))
+
+
+tt["first"]
+tt[["first"]]$x
+
+taxl <- df_sp %>%
+  group_keys() %>%
+  pull(taxonKey)

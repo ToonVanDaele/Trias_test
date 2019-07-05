@@ -17,7 +17,7 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
     g1 <- gam(ncells ~ s(year, k = maxk, m = mvalue, bs = "ts"), family = nb(),
               data = df, method = "REML")
     #draw(g1)  #appraise(g1)
-    # Predict to new data (200 values between first and last year)
+    # Predict to new data (5 values per year)
     df_n <- data.frame(year = seq(from = fyear, to = lyear,
                                   length.out = (lyear - fyear) * 5))
     temp <- predict(object = g1, newdata = df_n, type = "iterms", se.fit = TRUE)
@@ -35,7 +35,7 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
                           n = nrow(df_n), eps = 1e-4)
     #draw(deriv1) #draw(deriv2)
 
-    # Emerging or not, based on last year
+    # Emerging status based on first and second derivative
     em <- em_level(deriv1, deriv2)
     df_n <- bind_cols(df_n, em)
 
@@ -51,10 +51,9 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
 
   })
 
-  if (!result == 0){
+  if (class(result) == "try-error") {
     df$fit <- df$ucl <- df$lcl <- out <- NA
-    g1 <- NULL
-    df_n <- NULL
+    g1 <- df_n <- NULL
     deriv1 <- deriv2 <- NULL
   }
 
