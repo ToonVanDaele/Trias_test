@@ -14,7 +14,7 @@ spDT <- function(df){
   # it is always > 0 (due to preprocessing)
 
   if (nrow(df) == 1) {
-    df_em <- tibble(taxonKey = spec, eyear = lyear, em = "3")
+    df_em <- tibble(taxonKey = spec, eyear = lyear, method_em = "DT", em = "3")
     return(list(df = df, em = df_em))
   }
 
@@ -23,10 +23,10 @@ spDT <- function(df){
   # Second value = 0  -> possibly emerging ("2")
   if (nrow(df) == 2) {
     if (df[[2,"ncells"]] > 0)
-    {df_em <- tibble(taxonKey = spec, eyear = lyear, em = "3")
+    {df_em <- tibble(taxonKey = spec, eyear = lyear, method_em = "DT", em = "3")
       return(list(df = df, em = df_em))
     }else{
-      df_em <- tibble(taxonKey = spec, eyear = lyear, em = "2")
+      df_em <- tibble(taxonKey = spec, eyear = lyear, method_em = "DT", em = "2")
       return(list(df = df, em = df_em))
     }
   }
@@ -39,7 +39,7 @@ spDT <- function(df){
 
   if (nrow(df) >= 3){
     if (sum(df$ncells[2:nrow(df)]) == 0) {
-      df_em <- tibble(taxonKey = spec, eyear = lyear, em = "-3")
+      df_em <- tibble(taxonKey = spec, eyear = lyear, method_em = "DT", em = "-3")
       return(list(df = df, em = df_em))
     }
   }
@@ -47,14 +47,14 @@ spDT <- function(df){
   if (nrow(df) >= 3) {
     pmean <- mean(filter(df, year < lyear)$ncells)
     if (df[df$year == lyear, "ncells"] > pmean * 1.2) {
-      df_em <- tibble(taxonKey = spec, eyear = lyear, em = "3")
+      df_em <- tibble(taxonKey = spec, eyear = lyear,  method_em = "DT", em = "3")
       return(list(df = df, em = df_em))
     }else{
       if (df[df$year == lyear, "ncells"] > pmean * 0.8) {
-        df_em <- tibble(taxonKey = spec, eyear = lyear, em = "2")
+        df_em <- tibble(taxonKey = spec, eyear = lyear,  method_em = "DT", em = "2")
         return(list(df = df, em = df_em))
       }else{
-        df_em <- tibble(taxonKey = spec, eyear = lyear, em = "0")
+        df_em <- tibble(taxonKey = spec, eyear = lyear,  method_em = "DT", em = "0")
         return(list(df = df, em = df_em))
       }
     }
@@ -76,7 +76,7 @@ spDT <- function(df){
   #   }else{out <- FALSE}
   # }
   #
-  # df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, em = out)
+  # df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear,  method_em = "DT", em = out)
   # outlist <- list(df = df, em = df_em)
   # return(outlist)
 }

@@ -17,14 +17,16 @@ plot_ts <- function(df, ptitle = NULL,
   g <- ggplot(df, aes(x = year, y = ncells)) + geom_line(colour = "grey") +
     geom_point() + ggtitle(ptitle)
 
-  if (saveplot == TRUE) {ggsave(filename = paste0("./output/ts/", ptitle, ".png"), g)}
+  if (saveplot == TRUE) {
+    dir.create("./output/incr_em/", showWarnings = FALSE)
+    ggsave(filename = paste0("./output/ts/", ptitle, ".png"), g)}
   if (printplot == TRUE) plot(g)
   return(g)
 }
 
  ### Plot time series with confidence limits
 
-plot_ribbon <- function(df_n, df, ptitle, printplot = FALSE){
+plot_ribbon <- function(df_n, df, ptitle, printplot = FALSE, saveplot = FALSE){
 
   g <- ggplot(df_n, aes(x = year, y = fit)) + geom_line() +
     geom_ribbon(aes(ymax = ucl, ymin = lcl),
@@ -33,7 +35,9 @@ plot_ribbon <- function(df_n, df, ptitle, printplot = FALSE){
     geom_point(data = df, aes(x = year, y = ncells)) +
     ggtitle(ptitle)
 
-  ggsave(filename = paste0("./output/", ptitle, ".png"), g)
+  if (saveplot == TRUE) {
+  dir.create("./output/incr_em/", showWarnings = FALSE)
+  ggsave(filename = paste0("./output/", ptitle, ".png"), g)}
   if (printplot == TRUE) plot(g)
   return(g)
 }
@@ -57,7 +61,9 @@ plot_ribbon_em <- function(df_n, df, ptitle = NULL,
                                    "-2" = "green", "-3" = "dark green")) +
     ggtitle(ptitle)
 
-  if (saveplot == TRUE) ggsave(filename = paste0("./output/", ptitle, ".png"), g)
+  if (saveplot == TRUE) {
+    dir.create("./output/incr_em/", showWarnings = FALSE)
+    ggsave(filename = paste0("./output/", ptitle, ".png"), g)}
   if (printplot == TRUE) plot(g)
   return(g)
 }
@@ -80,8 +86,9 @@ plot_incr_em <- function(df, ptitle = NULL, printplot = FALSE, saveplot = FALSE)
       scale_color_manual(values = c("dark green", "dark red")) +
       ggtitle(ptitle)
 
-  if (saveplot == TRUE) {ggsave(filename = paste0("./output/incr_em/",
-                                                  ptitle, ".png"), g)}
+  if (saveplot == TRUE) {
+    dir.create("./output/incr_em/", showWarnings = FALSE)
+    ggsave(filename = paste0("./output/incr_em/", ptitle, ".png"), g)}
   if (printplot == TRUE) plot(g)
   return(g)
 }
@@ -102,7 +109,9 @@ plot_incr_em5 <- function(df, ptitle = NULL,
                                    na.value = "light grey") +
     ggtitle(ptitle)
 
-  if (saveplot == TRUE) ggsave(paste0("./output/incr/", ptitle, ".png"), g)
+  if (saveplot == TRUE) {
+    dir.create("./output/incr/", showWarnings = FALSE)
+    ggsave(paste0("./output/incr/", ptitle, ".png"), g)}
   if (printplot == TRUE) plot(g)
   return(g)
 }

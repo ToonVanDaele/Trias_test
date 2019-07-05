@@ -50,12 +50,12 @@ taxl_incr <- df_spe %>%
 ## Decision tree (no statistics)
 # on full time series
 dt_result <- df_sp %>%
-  group_split(taxonKey) %>%
+  group_split() %>%
   map(.f = spDT)
 
 # on increasing time series (unique species & evaluation year)
 dt_result_incr <- df_spe %>%
-  group_split(taxonKey, eyear) %>%
+  group_split() %>%
   map(.f = spDT)
 
 # Select only the em output for each taxonKey & eyear
@@ -65,8 +65,8 @@ dt_result <- df_sp %>%
   left_join(dt_em, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
 
 dt_em_plot <- dt_result %>%
-  group_split(taxonKey) %>%
-  map(.f = plot_incr_em)
+  group_split() %>%
+  map(.f = plot_incr_em, saveplot = TRUE)
 
 #plot(dt_em_plot[[1]])
 
@@ -112,7 +112,7 @@ for (i in df_outPR) {
 # GAM on full time series
 gam_result <- df_sp %>%
   group_split() %>%
-  map(.f = spGAM, saveplot = TRUE) %>%
+  map(.f = spGAM, saveplot = FALSE) %>%
   set_names(taxl)
 
 # Plot results
@@ -141,6 +141,16 @@ plot_emGAM <- gam_main %>%
 
 
 ### Join outputs from different methods
+
+# Results from full time series
+
+emDT <- dt_result %>% map_dfr("em")
+emGAM <- gam_result %>% map_dfr("em")
+
+main_f <- rbind(emDT, emGAM)
+
+main_s <- main_f %>%
+  spread(key = method_em, value = em)
 
 # Retrieve and combine the em result for each method, taxonKey & eyear combination
 emDT <- df_outDT %>%  map_dfr(c("em"))
