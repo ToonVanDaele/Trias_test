@@ -75,38 +75,22 @@ plot_ribbon_em <- function(df_n, df, ptitle = NULL,
 # input df
 # year, ncells, em
 
-plot_incr_em <- function(df, ptitle = NULL, printplot = FALSE, saveplot = FALSE) {
-
-  spec <- df[[1,"taxonKey"]]
-  lyear <- max(df$year)
-  if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
-
-  g <- ggplot(df, aes(x = year, y = ncells, colour = em)) + geom_point() +
-      geom_line(colour = "grey") +
-      scale_color_manual(values = c("dark green", "dark red")) +
-      ggtitle(ptitle)
-
-  if (saveplot == TRUE) {
-    dir.create("./output/incr_em/", showWarnings = FALSE)
-    ggsave(filename = paste0("./output/incr_em/", ptitle, ".png"), g)}
-  if (printplot == TRUE) plot(g)
-  return(g)
-}
 
 # Plot incrementing time series with 5 emerging status levels
-plot_incr_em5 <- function(df, ptitle = NULL,
+plot_incr_em <- function(df, ptitle = NULL,
                           printplot = FALSE, saveplot = FALSE) {
 
   spec <- df[[1,"taxonKey"]]
   lyear <- max(df$year)
   if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
 
-  g <- ggplot(df, aes(x = year, y = ncells, colour = em)) + geom_point() +
+  g <- ggplot(df, aes(x = year, y = ncells, colour = em)) +
     geom_line(colour = "grey") +
+    geom_point() +
     scale_colour_manual(values = c("3" = "red", "2" = "orangered", "1" = "orange",
-                                   "0" = "grey60", "-1" = "yellow",
+                                   "0" = "grey70", "-1" = "yellow",
                                    "-2" = "green", "-3" = "dark green"),
-                                   na.value = "light grey") +
+                                   na.value = "grey30") +
     ggtitle(ptitle)
 
   if (saveplot == TRUE) {

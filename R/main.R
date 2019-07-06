@@ -29,13 +29,14 @@ taxl <- df_sp %>%
 
 # plot time series
 g <- df_sp %>%
-  group_split(taxonKey) %>%
-  map(.f = plot_ts, printplot = FALSE, saveplot = FALSE)
+  group_split() %>%
+  map(.f = plot_ts, printplot = FALSE, saveplot = FALSE) %>%
+  set_names(taxl)
 
-#plot(g[[1]])
+#plot(g[[1]])  #plot(g[["2115769"]])
 
-# Create increasing time series (for testing)
-df_spe <- incrts(df_sp, backward = 5) %>%
+# Create increasing time series
+df_spe <- incrts(df_sp, backward = 2) %>%
   group_by(taxonKey, eyear)
 
 # Retrieve a vector with grouping key (used to name the output list later)
@@ -48,6 +49,7 @@ taxl_incr <- df_spe %>%
 ##### Run the different methods
 
 ## Decision tree (no statistics)
+
 # on full time series
 dt_result <- df_sp %>%
   group_split() %>%
@@ -58,53 +60,18 @@ dt_result_incr <- df_spe %>%
   group_split() %>%
   map(.f = spDT)
 
-# Select only the em output for each taxonKey & eyear
-dt_em <- dt_result_incr %>%  map_dfr(c("em"))
+# Select only the 'em' output for each taxonKey & eyear combination
+dt_em <- df_sp %>%
+  left_join(dt_result_incr %>%
+              map_dfr(c("em")),
+            by = c("taxonKey" = "taxonKey", "year" = "eyear"))
 
-dt_result <- df_sp %>%
-  left_join(dt_em, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
-
-dt_em_plot <- dt_result %>%
+dt_em_plot <- dt_em %>%
   group_split() %>%
-  map(.f = plot_incr_em, saveplot = TRUE)
+  map(.f = plot_incr_em, saveplot = FALSE) %>%
+  set_names(taxl)
 
-#plot(dt_em_plot[[1]])
-
-
-## Piecewise regresion
-# Complete time series
-PR_result <- df_sp %>%
-  group_split(taxonKey) %>%
-  map(.f = spPR)
-
-# Plot results and save
-for (i in PR_result) {
-  df <- i$df
-  df_n <- i$df_n
-  ptitle <- paste0("PR/", df[[1,1]], "_", max(df$year))
-  if (!is.null(df_n)) {
-    plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = TRUE)
-  }else{
-    plot_ts(df = df, ptitle = ptitle, printplot = TRUE)
-  }
-}
-
-# Incrementing time series
-df_outPR <- df_spe %>%
-  group_split(taxonKey, eyear) %>%
-  map(.f = spPR)
-
-# Plot results and save
-for (i in df_outPR) {
-  df <- i$df
-  df_n <- i$df_n
-  ptitle <- paste0("PR/", df[[1,1]], "_", max(df$year))
-  if (!is.null(df_n)) {
-    plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = FALSE)
-  }else{
-    plot_ts(df = df, ptitle = ptitle, printplot = FALSE)
-  }
-}
+#plot(dt_em_plot[["8542672"]])
 
 
 ## GAM
@@ -121,9 +88,6 @@ for (i in gam_result) {
 }
 
 # Incrementing time series
-# get a vector with the group keys
-df_spe <- group_by(df_spe, taxonKey, eyear)
-
 gam_result_incr <- df_spe %>%
   group_split() %>%
   map(.f = spGAM, saveplot = FALSE) %>%
@@ -136,7 +100,7 @@ gam_main <- df_sp %>%
 
 plot_emGAM <- gam_main %>%
   group_split() %>%
-  map(plot_incr_em5, saveplot = TRUE)
+  map(plot_incr_em5, saveplot = FALSE)
 
 
 
@@ -147,86 +111,27 @@ plot_emGAM <- gam_main %>%
 emDT <- dt_result %>% map_dfr("em")
 emGAM <- gam_result %>% map_dfr("em")
 
-main_f <- rbind(emDT, emGAM)
-
-main_s <- main_f %>%
+main_f <- rbind(emDT, emGAM) %>%
   spread(key = method_em, value = em)
 
-# Retrieve and combine the em result for each method, taxonKey & eyear combination
-emDT <- df_outDT %>%  map_dfr(c("em"))
-emGAM <- gam_result_incr %>%  map_dfr(c("em"))
-emPR <-  df_outPR %>% map_dfr(c("em"))
 
-df_main <- df_sp %>%
-  left_join(emGAM %>%
-              rename(gam = em) %>%
-              dplyr::select(-method_em), by = c("taxonKey" = "taxonKey", "year" = "eyear")) %>%
-  left_join(emPR %>%
-              rename(pr = em) %>%
-              dplyr::select(-method_em),  by = c("taxonKey" = "taxonKey", "year" = "eyear"))
+# Results from increasing time series
 
-df_main <- df_main %>%
-  gather(key = method_em, value = em, -taxonKey, -year, -ncells)
+emDTincr <- dt_result_incr %>% map_dfr("em")
+emGAMincr <- gam_result_incr %>% map_dfr("em")
+main_incr <- rbind(emDTincr, emGAMincr) %>%
+  spread(key = method_em, value = em)
 
-df_main
+# plot results increasing time series
 
+main_incr_df <- df_sp %>%
+  left_join(main_incr, by = c("taxonKey" = "taxonKey", "year" = "eyear")) %>%
+  mutate(em = GAM)
 
+main_incr_p <- main_incr_df %>%
+  group_split() %>%
+  map(plot_incr_em, saveplot = FALSE) %>%
+  set_names(taxl)
 
-
-
-
-
-df <- filter(df_sp, taxonKey == "7068379")
-
-t <- spGAM(df)
-
-draw(t$model)
-appraise(t$model)
-summary(t$model)
-
-draw(t$deriv1)
-draw(t$deriv2)
-
-tail(t$deriv1)
-tail(t$deriv2)
-t$em
-
-
-tpr <- spPR(df = df)
-
-df <- filter(df_pp, taxonKey == "2882849")
-plot_ts(df, printplot = TRUE)
-tgam <- spGAM(df = df)
-
-
-tpr <- spPR(df = df)
-tpr$df_n
-
-ptitle <- paste0(df[[1,1]])
-plot_ribbon_em(df_n = tgam[["df_n"]], df = tgam[["df"]], ptitle = ptitle, printplot = TRUE)
-
-plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle, printplot = TRUE)
-
-plot_ribbon_em(df_n = tpr[["df_n"]], df = tpr[["df"]], ptitle = ptitle, printplot = TRUE)
-# Output
-
-#def emerging
-#- absoluut aantal
-#- relatief aantal (eerste en tweede afgeleide)
-
-# Korte termijn eerste afgeleide,
-# langere termijn PR lineaire regressie coefficient verschillend van 0
-
-# Voorbeeld enkele tijdreeksen
-# Uitwerking in GAM -> + eerste afgeleide voor emerging
-
-# Uitwerking PR -> voorbeeld emerging / not emering + probleem
-
-# Uitwerking in INLA -> RW2 + eerste afgeleide als emerging
-
-
-# Test decision rules
-
-df <- data.frame(taxonKey = "001", year = c(1990, 1991, 1992), ncells = c(1,1,0))
-spDT(df)
+plot(main_incr_p[["1722299"]])
 
