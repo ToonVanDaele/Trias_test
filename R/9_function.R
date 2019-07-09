@@ -18,9 +18,12 @@ em_level <- function(df1, df2){
       .$lower > 0  & .$upper > 0 ~ "1")) %>%
     dplyr::select(year = data, em2)
 
+  # Optie om hier continue score van te maken?
+  # Combineren van 1ste en 2de afgeleide
+
   em <- bind_cols(em1, em2) %>%
     mutate(em = case_when(
-      em1 == 1   & em2 == 1  ~  "3",
+      em1 == 1   & em2 == 1  ~  "4",
       em1 == 1   & em2 == 0  ~  "3",
       em1 == 1   & em2 == -1 ~  "2",
       em1 == 0   & em2 == 1  ~  "1",
@@ -28,7 +31,7 @@ em_level <- function(df1, df2){
       em1 == 0   & em2 == -1  ~ "-1",
       em1 == -1  & em2 == 1  ~  "-2",
       em1 == -1  & em2 == 0  ~  "-3",
-      em1 == -1  & em2 == -1  ~ "-3")) %>%
+      em1 == -1  & em2 == -1  ~ "-4")) %>%
     dplyr::select(-year1)
   return(em)
 

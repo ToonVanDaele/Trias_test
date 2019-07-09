@@ -8,6 +8,7 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
   fyear <- min(df$year) # First year
   lyear <- max(df$year) # Last year
   spec <- df[[1,1]]     # species name (taxonKey)
+  spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn) %>% as.character()
   print(paste0(spec, "_", lyear))
 
   if (nrow(df) > 3 & sum(df$ncells[2:nrow(df)]) != 0){
@@ -15,14 +16,22 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
     result <- try({
 
       maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade
-      mvalue <- min(maxk - 1, 3)
-      g1 <- gam(ncells ~ s(year, k = maxk, m = mvalue, bs = "ts"), family = nb(),
+      #mvalue <- min(maxk - 1, 3)
+      g1 <- gam(ncells ~ s(year, k = maxk, m = 3, bs = "ts"), family = nb(),
                 data = df, method = "REML")
+
+      # ? GAMM werkt niet met negatief binomiaal?
+      g1 <- gamm(ncells ~ s(year, k = maxk, m = 3, bs = "ts"),
+                 correlation = corAR1(),
+                 family = quasipoisson,
+                data = df, method = "REML")
+
       #draw(g1)  #appraise(g1)
       # Predict to new data (5 values per year)
       df_n <- data.frame(year = seq(from = fyear, to = lyear,
                                     length.out = (lyear - fyear) * 5))
-      temp <- predict(object = g1, newdata = df_n, type = "iterms", se.fit = TRUE)
+      temp <- predict(object = g1, newdata = df_n, type = "iterms", interval = "prediction",
+                      se.fit = TRUE)
 
       # Calculate confidence intervals in link scale and backtransform to real scale
       intercept <- unname(g1$coefficients[1])
@@ -42,7 +51,7 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
       df_n <- bind_cols(df_n, em)
 
       # Create plot with conf. interval + colour for emerging status
-      ptitle <- paste0("GAM/", spec, "_", lyear)
+      ptitle <- paste0("GAM/", spec, "_", spn, "_", lyear)
       g <- plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle,
                           printplot = printplot, saveplot = saveplot)
 

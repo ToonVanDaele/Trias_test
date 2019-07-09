@@ -27,15 +27,20 @@ taxl <- df_sp %>%
   group_keys() %>%
   pull(taxonKey)
 
+library(rgbif)
+spec_names <- data.frame(taxonKey = taxl,
+                         spn = map_chr(taxl, ~ name_usage(.)$data$canonicalName))
+
 # plot time series
 g <- df_sp %>%
   group_split() %>%
-  map(.f = plot_ts, printplot = FALSE, saveplot = FALSE) %>%
+  map(.f = plot_ts, printplot = FALSE, saveplot = TRUE) %>%
   set_names(taxl)
 
-#plot(g[[1]])  #plot(g[["2115769"]])
+#plot(g[["2115769"]])
 
 # Create increasing time series
+# Aan te passen - tijdreeksen niet meer dupliceren
 df_spe <- incrts(df_sp, backward = 2) %>%
   group_by(taxonKey, eyear)
 
@@ -93,8 +98,17 @@ gam_result_incr <- df_spe %>%
   map(.f = spGAM, saveplot = FALSE) %>%
   set_names(taxl_incr)
 
+#saveRDS(gam_result_incr, file = "output/models/gam_result_incr.RDS")
+
 # Plot em status for increasing time series
 emGAM <- gam_result_incr %>%  map_dfr(c("em"))
+
+# Summary em status based on evaluation of last year
+emGAM %>%
+  group_by(em) %>%
+  count()
+
+
 gam_main <- df_sp %>%
   left_join(emGAM, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
 
@@ -126,12 +140,56 @@ main_incr <- rbind(emDTincr, emGAMincr) %>%
 
 main_incr_df <- df_sp %>%
   left_join(main_incr, by = c("taxonKey" = "taxonKey", "year" = "eyear")) %>%
-  mutate(em = GAM)
+  mutate(em = GAM) %>%
+  left_join(spec_names, by = "taxonKey")
 
-main_incr_p <- main_incr_df %>%
-  group_split() %>%
-  map(plot_incr_em, saveplot = FALSE) %>%
-  set_names(taxl)
 
-plot(main_incr_p[["1722299"]])
+seltax <- c("1031394")
+
+for (tax in taxl){
+  df <- main_incr_df %>%
+    filter(taxonKey == tax)
+  lyear <- max(df$year)
+  ptitle <- paste0(df[[1,1]], "_", df[[1,"spn"]], "_DT_", df[df$year == lyear, "DT"],
+                   "_GAM_", df[df$year == lyear, "GAM"])
+  plot_incr_em(df = df, ptitle = ptitle, printplot = FALSE, saveplot = TRUE)
+}
+
+
+
+
+# een van de drie laatste jaren emering -> emerging
+# 2 van de laatste drie jaren emerging -> emerging
+
+# ? Gewogen som?
+
+
+#### Samenvatting
+
+
+main_incr_df %>%
+  group_by(em) %>%
+  filter(year == 2017) %>%
+  count()
+
+
+more_one_cells <- main_incr_df %>%
+  ungroup() %>%
+  group_by(taxonKey) %>%
+  summarise(maxcells = max(ncells)) %>%
+  filter(maxcells > 1) %>%
+  pull(taxonKey)
+
+# 1690429 - 2015-2017 geven allemaal 0. Komt door breed betrouwbaarheidsinterval
+# 2225772 - is traag emerging. met 'tp' smoother em(2013), maar niet met 'ts'
+# 2226990 - is emerging. Ook goed resultaat met GAM
+# 2227000 - hier ontbreekt echt correctie voor observatieinspanning op klasse niveau
+# 2287615 - deze zou als duidelijk emerging moeten klasseren
+# 2362868 - is niet emerging. Helemaal gestabiliseerd
+# 2379089 - zou emerging moeten zijn. GAM geeft niet emerging
+# 2426661 - niet emerging, wel gestabiliseerd. GAM afhankelijk van de smoother
+# 1718308 - emerging  = ok
+
+
+
 

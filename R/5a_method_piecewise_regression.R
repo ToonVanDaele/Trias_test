@@ -8,6 +8,7 @@ spPR <- function(df){
   fyear <- min(df$year)
   lyear <- max(df$year)
   spec <- df[[1,1]]
+  spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn) %>% as.character()
   print(paste0(spec, "_", lyear))
 
   result <- try({

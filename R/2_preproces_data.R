@@ -1,14 +1,20 @@
 #### Preprocessing and filtering of data
 
+# df <- input data frame from occ-processing
+#
+# df_pp$ncells <- area of occupancy (number of cells) per species, year
+# df_po$occ    <- sum of occurrences per species, year
+
 preproc <- function(df){
 
   # Total number of species before preprocessing
-  length(unique(df$taxonKey))
+  print(length(unique(df$taxonKey)))
 
   # Extract time series with number of cells per year & species
   df_pp <- df %>%
     group_by(taxonKey, year) %>%
-    summarise(ncells = n())
+    summarise(ncells = n(),
+              occ = sum(n))
 
   #### Period
   # Minimum and maximum year
@@ -33,37 +39,6 @@ preproc <- function(df){
     mutate(drop = year < minyear) %>%
     filter(drop == FALSE) %>%
     select(-drop, -minyear)
-
-
-  #### Minimum time series
-  # At least 5 consecutive observations till 2017
-  # Species that are not observed since a long time are not considered
-  # just for testing purpose. Requires fine tuning
-
-  # specfilter <- df_pp %>%
-  #   summarise(maxyear = max(year)) %>%
-  #   filter(maxyear >= 2017) %>%
-  #   .$taxonKey
-  #
-  #
-  # df <- df %>%
-  #   filter(taxonKey %in% specfilter)
-  #
-  #
-  #
-  #
-  #
-  #
-  #
-  #
-  # # When there is a gap of > 5 years (no observations during > 5 years),
-  # # the data before the gap is not considered.
-  #
-  #
-  #
-  #
-  # # Total number of species after preprocessing
-  # length(unique(df$taxonKey))
 
   return(df_pp)
 }
