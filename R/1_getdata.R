@@ -3,7 +3,7 @@
 # Data from the data-cube
 df <- read.table(file = "./data/cube_belgium.tsv", header = TRUE)
 
-df$taxonKey <- as.factor(df$taxonKey)
+df$taxonKey <- as.character(df$taxonKey)
 
 head(df)
 str(df)

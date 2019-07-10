@@ -10,7 +10,8 @@ preproc <- function(df){
   # Total number of species before preprocessing
   print(length(unique(df$taxonKey)))
 
-  # Extract time series with number of cells per year & species
+  # Extract time series with number of cells (ncells) and number
+  # of occurrences (occ) per year & species
   df_pp <- df %>%
     group_by(taxonKey, year) %>%
     summarise(ncells = n(),
@@ -23,22 +24,25 @@ preproc <- function(df){
   df_pp <- filter(df_pp, year > 1950 & year <= 2017)
 
   #### Gaps
-  # Gaps of less than 5 years (no obs during < 5 years)
-  # Between first and last observation replace NA with 0
-  df_pp <- df_pp %>%
+  # spread and gather on ncells to add the years with 0 observations
+  df_temp <- df_pp %>%
+    dplyr::select(-occ) %>%
     spread(key = taxonKey, value = ncells) %>%
-    gather(key = taxonKey, value = ncells, -year) %>%
-    mutate_all(list(~replace(., is.na(.), 0)))
+    gather(key = taxonKey, value = ncells, -year)
 
-  # Remove zeros before first observation
-  df_pp <- df_pp %>%
+  # Remove all zeros before first observation. Define the first year with
+  # data (> 0) and drop all records before that year.
+  # Join again the occurence data and replace NA's by 0
+  df_temp <- df_temp %>%
     filter(ncells > 0) %>%
     group_by(taxonKey) %>%
     summarise(minyear = min(year)) %>%
-    left_join(df_pp, by = "taxonKey") %>%
+    left_join(df_temp, by = "taxonKey") %>%
     mutate(drop = year < minyear) %>%
     filter(drop == FALSE) %>%
-    select(-drop, -minyear)
+    select(-drop, -minyear) %>%
+    left_join(select(df_pp, - ncells), by = c("taxonKey", "year")) %>%
+    mutate_all(list(~replace(., is.na(.), 0)))
 
-  return(df_pp)
+  return(df_temp)
 }
