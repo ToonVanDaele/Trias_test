@@ -9,7 +9,15 @@
 # Value
 # eyear = evaluation year (the last year of each time series)
 
-incrts <- function(df, backward = 5){
+filter_year <- function(eyear, tK, df){
+  df_out <- df %>%
+    filter(taxonKey == tK & year <= eyear)
+  if (nrow(df_out) > 0) df_out$eyear <- eyear
+  return(df_out)
+}
+
+
+incrts <- function(df, backward = 4){
 
   lyear <- max(df$year)
 
@@ -17,13 +25,6 @@ incrts <- function(df, backward = 5){
 
   df_temp <- expand.grid(taxonKey = unique(df$taxonKey),
                          eval_year = eval_year)
-
-  filter_year <- function(eyear, tK, df){
-    df_out <- df %>%
-      filter(taxonKey == tK & year <= eyear)
-    if (nrow(df_out) > 0) df_out$eyear <- eyear
-    return(df_out)
-  }
 
   t <- map2_dfr(.x = df_temp$eval_year,
                 .y = df_temp$taxonKey,

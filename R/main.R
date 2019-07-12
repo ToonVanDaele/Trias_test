@@ -13,12 +13,14 @@ source(file = "./R/9b_plot_function.R")
 
 # Get data
 df_in <- readRDS(file = "./data/cube_belgium.RDS")
+df_bl <- readRDS(file = "./data/cube_belgium_baseline.RDS")
+spec_names <- readRDS(file = "./data/spec_names.RDS")
 
 # Do some preprocessing
 df_pp <- preproc(df_in)
+df_bl <- preprocbl(df_bl)
 
-# Select species
-# (Mainly for testing)
+# Select species (for testing)
 df_sp <- selspec(df_pp) %>%
   group_by(taxonKey)
 
@@ -27,20 +29,15 @@ taxl <- df_sp %>%
   group_keys() %>%
   pull(taxonKey)
 
-library(rgbif)
-spec_names <- data.frame(taxonKey = taxl,
-                         spn = map_chr(taxl, ~ name_usage(.)$data$canonicalName))
-
 # plot time series
 g <- df_sp %>%
   group_split() %>%
-  map(.f = plot_ts, printplot = FALSE, saveplot = TRUE) %>%
+  map(.f = plot_ts, printplot = TRUE, saveplot = TRUE) %>%
   set_names(taxl)
 
 #plot(g[["2115769"]])
 
-# Create increasing time series
-# Aan te passen - tijdreeksen niet meer dupliceren
+# Select number of years for evaluation
 df_spe <- incrts(df_sp, backward = 2) %>%
   group_by(taxonKey, eyear)
 
@@ -49,7 +46,6 @@ taxl_incr <- df_spe %>%
   group_keys() %>%
   mutate(key = paste(taxonKey, eyear, sep = "_")) %>%
   pull(key)
-
 
 ##### Run the different methods
 

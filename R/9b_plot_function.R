@@ -15,10 +15,33 @@ plot_ts <- function(df, ptitle = NULL,
   if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
 
   g <- ggplot(df, aes(x = year, y = ncells)) + geom_line(colour = "grey") +
-    geom_point() + ggtitle(ptitle)
+    geom_point() +
+    geom_line(aes(y = occ), colour = "orange") + geom_point(aes(y = occ), colour = "red") +
+    ggtitle(ptitle)
 
   if (saveplot == TRUE) {
     dir.create("./output/incr_em/", showWarnings = FALSE)
+    ggsave(filename = paste0("./output/ts/", ptitle, ".png"), g)}
+  if (printplot == TRUE) plot(g)
+  return(g)
+}
+
+### Plot proportions
+
+plotprop <- function(df, ptitle = NULL,
+                    printplot = FALSE, saveplot = FALSE){
+
+  speckey <- df[[1,1]]
+  specname <- df[[1,"spn"]]
+  lyear <- max(df$year)
+
+  if (is.null(ptitle)) {ptitle <- paste0(speckey, "_", specname, "_", lyear, "_prop")}
+
+  g <- ggplot(df, aes(x = year, y = prop)) + geom_line(colour = "grey") +
+    geom_point() + ggtitle(ptitle)
+
+  if (saveplot == TRUE) {
+    dir.create("./output/ts/", showWarnings = FALSE)
     ggsave(filename = paste0("./output/ts/", ptitle, ".png"), g)}
   if (printplot == TRUE) plot(g)
   return(g)

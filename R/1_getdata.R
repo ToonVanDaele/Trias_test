@@ -1,13 +1,36 @@
 ## Load data from Github and store as RDS file
 
-# Data from the data-cube
-df <- read.table(file = "./data/cube_belgium.tsv", header = TRUE)
+# Data 'cube_belgium'
+df <- read.table(file = "./data/cube_belgium.tsv",
+                 header = TRUE, stringsAsFactors = FALSE)
 
 df$taxonKey <- as.character(df$taxonKey)
-
-head(df)
-str(df)
-summary(df)
+df <- select(df, -min_coord_uncertainty)
 
 saveRDS(object = df, file = "./data/cube_belgium.RDS")
+
+
+# Data 'cube_belgium_baseline'
+df_bl <- read.table(file = "./data/cube_belgium_baseline.tsv",
+                    header = TRUE, stringsAsFactors =  FALSE)
+
+df_bl$classKey <- as.character(df_bl$classKey)
+df_bl <- select(df_bl, -min_coord_uncertainty)
+
+saveRDS(object = df_bl, file = "./data/cube_belgium_baseline.RDS")
+
+# species - kingdomkey - canonicalName
+
+speclist <- unique(df$taxonKey)
+library(rgbif)
+spec_names <- data.frame(taxonKey = speclist,
+                         spn = map_chr(speclist, ~ name_usage(.)$data$canonicalName),
+                         kingdomKey = map_chr(speclist, ~ name_usage(.)$data$kingdomKey),
+                         stringsAsFactors = FALSE)
+
+# spec_names$taxonKey <- as.character(spec_names$taxonKey)
+# spec_names$spn <- as.character(spec_names$spn)
+# spec_names$kingdomKey <- as.character(spec_names$kingdomKey)
+
+saveRDS(object = spec_names, file = "./data/spec_names.RDS")
 
