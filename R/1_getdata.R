@@ -20,17 +20,13 @@ df_bl <- select(df_bl, -min_coord_uncertainty)
 saveRDS(object = df_bl, file = "./data/cube_belgium_baseline.RDS")
 
 # species - kingdomkey - canonicalName
-
 speclist <- unique(df$taxonKey)
 library(rgbif)
 spec_names <- data.frame(taxonKey = speclist,
                          spn = map_chr(speclist, ~ name_usage(.)$data$canonicalName),
                          kingdomKey = map_chr(speclist, ~ name_usage(.)$data$kingdomKey),
+                         classKey = map_chr(speclist, ~ name_usage(.)$data$classKey),
                          stringsAsFactors = FALSE)
-
-# spec_names$taxonKey <- as.character(spec_names$taxonKey)
-# spec_names$spn <- as.character(spec_names$spn)
-# spec_names$kingdomKey <- as.character(spec_names$kingdomKey)
 
 saveRDS(object = spec_names, file = "./data/spec_names.RDS")
 

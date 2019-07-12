@@ -1,191 +1,111 @@
-### Main
+### Main2
+
+# 5 approaches for the analysis
+
+# obs = number of observations
+# ncells = number of cells (obs > 1)
+# cobs = number of observations of the species class
+# ncobs = number of cells (cobs > 1)
+
+# A. obs ~ year   (neg. binom - loglink )
+# B. ncells ~ year  (neg. binom - loglink)  ncells <<<< tot. number of cells
+# C. obs ~ year + cobs  (neg. binom - loglink)
+# D. ncells ~ year + cobs  (neg. binom - loglink) ncells <<<< tot. number of cells
+# E. ncells ~ year + ncobs  (neg. binom - loglink) ncells <<<< tot. number of cells
+
+#### By year + cellID
+# obs = number of observations
+# pobs = presence / absence
+# cobs = number of observations of species class
+# ncobs = number of cells (cobs > 1)
+
+# E. obs ~ year + cobs  (neg. binom. - log)
+# F. pobs ~ year + cobs  (binomial - logit link)
+# G. pobs ~ year + ncobs (binomial - logit link)
+
+# Three dataframes are generated:
+# df_s = data by year and cellID
+# df_pp = data sumarized by year
+# df_spa = data by year and cellID (presence/absence)
 
 # Init
 library(tidyverse)
 source(file = "./R/2_preproces_data.R")
 source(file = "./R/3_select_species.R")
 source(file = "./R/3b_incr_times_series.R")
-source(file = "./R/4_method_decision_tree.R")
-source(file = "./R/5a_method_piecewise_regression.R")
 source(file = "./R/5c_method_GAM.R")
 source(file = "./R/9_function.R")
 source(file = "./R/9b_plot_function.R")
 
-# Get data
+## Load data
 df_in <- readRDS(file = "./data/cube_belgium.RDS")
 df_bl <- readRDS(file = "./data/cube_belgium_baseline.RDS")
 spec_names <- readRDS(file = "./data/spec_names.RDS")
 
-# Do some preprocessing
-df_pp <- preproc(df_in)
-df_bl <- preprocbl(df_bl)
+## Preprocessing
+temp <- preproc(df_in, df_bl, spec_names)
+df_s <- temp[[1]]
+df_pp <- temp[[2]]
+remove(temp)
 
-# Select species (for testing)
-df_sp <- selspec(df_pp) %>%
-  group_by(taxonKey)
-
-# Get a vector with the group names
-taxl <- df_sp %>%
-  group_keys() %>%
-  pull(taxonKey)
-
-# plot time series
-g <- df_sp %>%
-  group_split() %>%
-  map(.f = plot_ts, printplot = TRUE, saveplot = TRUE) %>%
-  set_names(taxl)
-
-#plot(g[["2115769"]])
-
-# Select number of years for evaluation
-df_spe <- incrts(df_sp, backward = 2) %>%
-  group_by(taxonKey, eyear)
-
-# Retrieve a vector with grouping key (used to name the output list later)
-taxl_incr <- df_spe %>%
-  group_keys() %>%
-  mutate(key = paste(taxonKey, eyear, sep = "_")) %>%
-  pull(key)
-
-##### Run the different methods
-
-## Decision tree (no statistics)
-
-# on full time series
-dt_result <- df_sp %>%
-  group_split() %>%
-  map(.f = spDT)
-
-# on increasing time series (unique species & evaluation year)
-dt_result_incr <- df_spe %>%
-  group_split() %>%
-  map(.f = spDT)
-
-# Select only the 'em' output for each taxonKey & eyear combination
-dt_em <- df_sp %>%
-  left_join(dt_result_incr %>%
-              map_dfr(c("em")),
-            by = c("taxonKey" = "taxonKey", "year" = "eyear"))
-
-dt_em_plot <- dt_em %>%
-  group_split() %>%
-  map(.f = plot_incr_em, saveplot = FALSE) %>%
-  set_names(taxl)
-
-#plot(dt_em_plot[["8542672"]])
+# presence absence to be added
 
 
-## GAM
+# baseline data
+# add x, y
+df_bl$x <- as.integer(substr(df_bl$eea_cell_code, start = 5, stop = 8))
+df_bl$y <- as.integer(substr(df_bl$eea_cell_code, start = 10, stop = 13))
 
-# GAM on full time series
-gam_result <- df_sp %>%
-  group_split() %>%
-  map(.f = spGAM, saveplot = FALSE) %>%
-  set_names(taxl)
+# filter within xy belgian limits
+# year between 1950 and 2017
+# minimum 10 observations per class/year/cell
+df_bl <- df_bl %>%
+  filter(year > 1950 & year < 2017) %>%
+  filter(x >= 3768 & x <= 4079 & y >= 2926 & y <= 3236)
 
-# Plot results
-for (i in gam_result) {
-  if (!is.null(i$plot)) plot(i$plot)
-}
+head(df_bl)
+head(df_in)
+head(spec_names)
 
-# Incrementing time series
-gam_result_incr <- df_spe %>%
-  group_split() %>%
-  map(.f = spGAM, saveplot = FALSE) %>%
-  set_names(taxl_incr)
+# Join class and species name to df_in
+df_in <- df_in %>%
+  rename(obs = n) %>%
+  left_join(select(spec_names,
+                   -kingdomKey), by = "taxonKey")
 
-#saveRDS(gam_result_incr, file = "output/models/gam_result_incr.RDS")
+head(df_in)
 
-# Plot em status for increasing time series
-emGAM <- gam_result_incr %>%  map_dfr(c("em"))
+# For each species join the baseline with the proper classKey
+# and create a data frame with presences and absences
 
-# Summary em status based on evaluation of last year
-emGAM %>%
-  group_by(em) %>%
-  count()
+spec <- "3171948"
+specc <- spec_names[spec_names$taxonKey == spec, "classKey"]
+spn <- spec_names[spec_names$taxonKey == spec, "spn"]
 
+temp <- df_in %>%
+  filter(taxonKey == spec) %>%
+  full_join(df_bl %>%
+              filter(classKey == specc),
+            by = c("year", "eea_cell_code", "classKey")) %>%
+  rename(cobs = n) %>%
+  filter(!is.na(obs) | (is.na(obs) & cobs > 20))
 
-gam_main <- df_sp %>%
-  left_join(emGAM, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
+temp$taxonKey <- spec
+temp$spn <- spn
+temp$obs[is.na(temp$obs)] <- 0
 
-plot_emGAM <- gam_main %>%
-  group_split() %>%
-  map(plot_incr_em5, saveplot = FALSE)
-
-
-
-### Join outputs from different methods
-
-# Results from full time series
-
-emDT <- dt_result %>% map_dfr("em")
-emGAM <- gam_result %>% map_dfr("em")
-
-main_f <- rbind(emDT, emGAM) %>%
-  spread(key = method_em, value = em)
-
-
-# Results from increasing time series
-
-emDTincr <- dt_result_incr %>% map_dfr("em")
-emGAMincr <- gam_result_incr %>% map_dfr("em")
-main_incr <- rbind(emDTincr, emGAMincr) %>%
-  spread(key = method_em, value = em)
-
-# plot results increasing time series
-
-main_incr_df <- df_sp %>%
-  left_join(main_incr, by = c("taxonKey" = "taxonKey", "year" = "eyear")) %>%
-  mutate(em = GAM) %>%
-  left_join(spec_names, by = "taxonKey")
-
-
-seltax <- c("1031394")
-
-for (tax in taxl){
-  df <- main_incr_df %>%
-    filter(taxonKey == tax)
-  lyear <- max(df$year)
-  ptitle <- paste0(df[[1,1]], "_", df[[1,"spn"]], "_DT_", df[df$year == lyear, "DT"],
-                   "_GAM_", df[df$year == lyear, "GAM"])
-  plot_incr_em(df = df, ptitle = ptitle, printplot = FALSE, saveplot = TRUE)
-}
+temp %>%
+  ggplot(aes(x = cobs, y = obs)) + geom_point()
 
 
 
 
-# een van de drie laatste jaren emering -> emerging
-# 2 van de laatste drie jaren emerging -> emerging
 
-# ? Gewogen som?
+#listlenght = aanal soorten per jaar en per cel  smoother
 
+#enkel cellen en jaren waar minstens 10 soorten gezien zijn
 
-#### Samenvatting
+# gamxy
 
-
-main_incr_df %>%
-  group_by(em) %>%
-  filter(year == 2017) %>%
-  count()
-
-
-more_one_cells <- main_incr_df %>%
-  ungroup() %>%
-  group_by(taxonKey) %>%
-  summarise(maxcells = max(ncells)) %>%
-  filter(maxcells > 1) %>%
-  pull(taxonKey)
-
-# 1690429 - 2015-2017 geven allemaal 0. Komt door breed betrouwbaarheidsinterval
-# 2225772 - is traag emerging. met 'tp' smoother em(2013), maar niet met 'ts'
-# 2226990 - is emerging. Ook goed resultaat met GAM
-# 2227000 - hier ontbreekt echt correctie voor observatieinspanning op klasse niveau
-# 2287615 - deze zou als duidelijk emerging moeten klasseren
-# 2362868 - is niet emerging. Helemaal gestabiliseerd
-# 2379089 - zou emerging moeten zijn. GAM geeft niet emerging
-# 2426661 - niet emerging, wel gestabiliseerd. GAM afhankelijk van de smoother
-# 1718308 - emerging  = ok
-
-
-
-
+# smoother -> listlength
+# x= aantal soorten gezien per cel,  y = kans op voorkomen per cel
