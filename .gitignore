@@ -41,3 +41,10 @@ rsconnect/
 
 # output
 /output/
+
+# cache & files
+*_cache/
+*_files/
+
+#html
+*.html
