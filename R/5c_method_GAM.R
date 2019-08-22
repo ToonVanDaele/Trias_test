@@ -21,10 +21,10 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
                 data = df, method = "REML")
 
       # ? GAMM werkt niet met negatief binomiaal?
-      g1 <- gamm(ncells ~ s(year, k = maxk, m = 3, bs = "ts"),
-                 correlation = corAR1(),
-                 family = quasipoisson,
-                data = df, method = "REML")
+      # g1 <- gamm(ncells ~ s(year, k = maxk, m = 3, bs = "ts"),
+      #            correlation = corAR1(),
+      #            family = quasipoisson,
+      #           data = df, method = "REML")
 
       #draw(g1)  #appraise(g1)
       # Predict to new data (5 values per year)

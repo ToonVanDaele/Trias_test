@@ -16,7 +16,7 @@ plot_ts <- function(df, ptitle = NULL,
 
   g <- ggplot(df, aes(x = year, y = ncells)) + geom_line(colour = "grey") +
     geom_point() +
-    geom_line(aes(y = occ), colour = "orange") + geom_point(aes(y = occ), colour = "red") +
+    geom_line(aes(y = obs), colour = "orange") + geom_point(aes(y = obs), colour = "red") +
     ggtitle(ptitle)
 
   if (saveplot == TRUE) {

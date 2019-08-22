@@ -1,0 +1,133 @@
+---
+title: "Trias_eda"
+author: "Toon Van Daele"
+date: "22 augustus 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+library(tidyverse)
+source(file = "../R/2_preproces_data.R")
+```
+
+## Exploratory data analysis of Trias data
+
+This documents presents some basic data exploration for the TRIAS data.
+
+The data set is a dump from GBIF -> see github -> trias-project/occ-processing
+
+```{r load data}
+df_in <- readRDS(file = "../data/cube_belgium.RDS")
+df_bl <- readRDS(file = "../data/cube_belgium_baseline.RDS")
+spec_names <- readRDS(file = "../data/spec_names.RDS")
+```
+
+Aantal observaties per jaar voor alle soorten
+
+```{r}
+df_in %>%
+  group_by(year) %>%
+  summarise(nobs = sum(n)) %>%
+  ggplot(aes(x = year, y = nobs)) + geom_point()
+```
+
+De observaties voor 1950 laten we weg. Ze zijn niet nodig voor de analyse (data van 1950 tot nu is meer dan lang genoeg).
+De laatste twee jaar (2018, 2019) is er duidelijk een effect van de vertraging voor het invoeren van de waarnemingen in GBIF. We bekijken de data daarom slechts tot en met 2017.
+
+```{r preprocessing}
+fyear <- 1950
+lyear <- 2017
+
+df_pp <- preproc(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
+df_s <- preproc_s(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
+df_spa <- preproc_pa(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
+```
+
+De tijdreeksen zijn pre-processed.
+Het beginjaar is het eerste jaar met observaties van een soort.
+Voor alle daaropvolgende jaren worden de tijdreeksen aangevuld met '0' 
+voor de jaren waarop er geen observaties van de soort zijn.
+
+```{r}
+nb_species <- length(unique(df_pp$taxonKey))
+```
+
+Total number of species `r nb_species`
+
+```{r tlength}
+# Length of the time series 
+df_temp <- df_pp %>%
+  group_by(taxonKey) %>%
+  summarise(minyear = min(year),
+            maxyear = max(year)) %>%
+  mutate(tlength = maxyear - minyear) %>%
+  group_by(tlength) %>%
+  summarise(nb = n()) %>%
+  arrange(desc(tlength))
+
+tlength0 <- df_temp %>% filter(tlength == 0) %>% .$nb
+```
+
+Aantal tijdreeksen in functie van de lengte (2017 - eerste waarneming)
+
+Voor veel soorten (`r tlength0`) is er slecht 1 jaar met waarnemingen (i.e. in het jaar 2017)
+
+```{r plottlength}
+df_temp %>%
+  filter(tlength > 0) %>%
+  ggplot(aes(x = tlength, y = nb)) + geom_point()
+```
+
+Aantal soorten per jaar met minstens 1 observatie
+
+```{r specyear}
+df_pp %>%
+  filter(obs > 0) %>%
+  group_by(year) %>%
+  summarise(nspec = n_distinct(taxonKey)) %>%
+  arrange(year) %>%
+  ggplot(aes(x = year, y = nspec)) + geom_point()
+```
+
+De data is als volgt:
+
+- obs = het aantal observaties
+- ncells = het aantal cellen met minstens 1 observaties (obs >= 1)
+
+
+- cobs = aantal observaties van de klasse van de soort
+- ncobs = aantal cellen met observaties van de klasse van de soort
+
+Het aantal observaties en aantal cellen met observaties voor 2017
+
+```{r}
+df_pp %>%
+  ungroup() %>%
+  filter(year == 2017) %>%
+  arrange(obs) %>%
+  mutate(id = row_number()) %>%
+  ggplot(aes(x = id, y = obs)) + geom_point() + scale_y_log10()
+```
+
+Aantal cellen met observaties (ncells) voor 2017.
+
+```{r}
+df_pp %>%
+  ungroup() %>%
+  filter(year == 2017) %>%
+  arrange(ncells) %>%
+  mutate(id = row_number()) %>%
+  ggplot(aes(x = id, y = ncells)) + geom_point() + scale_y_log10()
+```
+
+
+De tijdreeksen zijn zeer uiteenlopend.
+
+De meeste tijdreeksen zijn vrij kort, met een beperkt aantal observaties of cellen
+per jaar. Enkele voorbeelden ter illustratie.
+
+```{r}
+
+```
+

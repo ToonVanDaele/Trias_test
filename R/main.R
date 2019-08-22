@@ -1,11 +1,11 @@
 ### Main2
 
-# 5 approaches for the analysis
+# Approaches for the analysis
 
 # obs = number of observations
-# ncells = number of cells (obs > 1)
+# ncells = number of cells (obs >= 1)
 # cobs = number of observations of the species class
-# ncobs = number of cells (cobs > 1)
+# ncobs = number of cells (cobs >= 1)
 
 # A. obs ~ year   (neg. binom - loglink )
 # B. ncells ~ year  (neg. binom - loglink)  ncells <<<< tot. number of cells
@@ -17,15 +17,15 @@
 # obs = number of observations
 # pobs = presence / absence
 # cobs = number of observations of species class
-# ncobs = number of cells (cobs > 1)
+# ncobs = number of cells (cobs >= 1)
 
 # E. obs ~ year + cobs  (neg. binom. - log)
 # F. pobs ~ year + cobs  (binomial - logit link)
 # G. pobs ~ year + ncobs (binomial - logit link)
 
-# Three dataframes are generated:
-# df_s = data by year and cellID
-# df_pp = data sumarized by year
+# Three dataframes are generated
+# df_s = obs, cobs by taxonKey + year + cellID
+# df_pp = obs, ncells, cobs, ncobs by taxonKey + year
 # df_spa = data by year and cellID (presence/absence)
 
 # Init
@@ -43,60 +43,31 @@ df_bl <- readRDS(file = "./data/cube_belgium_baseline.RDS")
 spec_names <- readRDS(file = "./data/spec_names.RDS")
 
 ## Preprocessing
-temp <- preproc(df_in, df_bl, spec_names)
-df_s <- temp[[1]]
-df_pp <- temp[[2]]
-remove(temp)
+fyear <- 1950
+lyear <- 2017
 
-# presence absence to be added
+df_pp <- preproc(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
+df_s <- preproc_s(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
+df_spa <- preproc_pa(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
 
 
-# baseline data
-# add x, y
-df_bl$x <- as.integer(substr(df_bl$eea_cell_code, start = 5, stop = 8))
-df_bl$y <- as.integer(substr(df_bl$eea_cell_code, start = 10, stop = 13))
+df_pp %>%
+  filter(taxonKey == "3172100") %>%
+  ggplot(aes(x = year, y = obs)) + geom_point() + geom_line()
 
-# filter within xy belgian limits
-# year between 1950 and 2017
-# minimum 10 observations per class/year/cell
-df_bl <- df_bl %>%
-  filter(year > 1950 & year < 2017) %>%
-  filter(x >= 3768 & x <= 4079 & y >= 2926 & y <= 3236)
+df_pp %>%
+  filter(taxonKey == "3172100") %>%
+  ggplot(aes(x = year, y = cobs)) + geom_point() + geom_line()
 
-head(df_bl)
-head(df_in)
-head(spec_names)
 
-# Join class and species name to df_in
-df_in <- df_in %>%
-  rename(obs = n) %>%
-  left_join(select(spec_names,
-                   -kingdomKey), by = "taxonKey")
-
-head(df_in)
-
-# For each species join the baseline with the proper classKey
-# and create a data frame with presences and absences
-
-spec <- "3171948"
-specc <- spec_names[spec_names$taxonKey == spec, "classKey"]
-spn <- spec_names[spec_names$taxonKey == spec, "spn"]
-
-temp <- df_in %>%
-  filter(taxonKey == spec) %>%
-  full_join(df_bl %>%
-              filter(classKey == specc),
-            by = c("year", "eea_cell_code", "classKey")) %>%
-  rename(cobs = n) %>%
-  filter(!is.na(obs) | (is.na(obs) & cobs > 20))
-
-temp$taxonKey <- spec
-temp$spn <- spn
-temp$obs[is.na(temp$obs)] <- 0
-
-temp %>%
+df_pp %>%
+  filter(taxonKey == "3172100") %>%
   ggplot(aes(x = cobs, y = obs)) + geom_point()
 
+
+df_pp %>%
+  filter(taxonKey == "3172100") %>%
+  ggplot(aes(x = ncobs, y = ncells)) + geom_point() + geom_smooth()
 
 
 

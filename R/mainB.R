@@ -1,24 +1,5 @@
-### Main
+### Main B
 
-# Init
-library(tidyverse)
-source(file = "./R/2_preproces_data.R")
-source(file = "./R/3_select_species.R")
-source(file = "./R/3b_incr_times_series.R")
-source(file = "./R/4_method_decision_tree.R")
-source(file = "./R/5a_method_piecewise_regression.R")
-source(file = "./R/5c_method_GAM.R")
-source(file = "./R/9_function.R")
-source(file = "./R/9b_plot_function.R")
-
-# Get data
-df_in <- readRDS(file = "./data/cube_belgium.RDS")
-df_bl <- readRDS(file = "./data/cube_belgium_baseline.RDS")
-spec_names <- readRDS(file = "./data/spec_names.RDS")
-
-# Do some preprocessing
-df_pp <- preproc(df_in)
-df_bl <- preprocbl(df_bl)
 
 # Select species (for testing)
 df_sp <- selspec(df_pp) %>%
