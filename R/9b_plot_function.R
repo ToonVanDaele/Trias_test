@@ -6,7 +6,7 @@
 # input df
 # year, ncells
 
-plot_ts <- function(df, ptitle = NULL,
+plot_ts <- function(df, y_axis = "ncells", ptitle = NULL,
                     printplot = FALSE, saveplot = FALSE){
 
   spec <- df[[1,1]]
@@ -14,10 +14,8 @@ plot_ts <- function(df, ptitle = NULL,
 
   if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
 
-  g <- ggplot(df, aes(x = year, y = ncells)) + geom_line(colour = "grey") +
-    geom_point() +
-    geom_line(aes(y = obs), colour = "orange") + geom_point(aes(y = obs), colour = "red") +
-    ggtitle(ptitle)
+  g <- ggplot(df, aes(x = year, y = get(y_axis))) + geom_line(colour = "grey") +
+    geom_point() + ggtitle(ptitle)
 
   if (saveplot == TRUE) {
     dir.create("./output/incr_em/", showWarnings = FALSE)

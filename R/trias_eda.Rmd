@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 library(tidyverse)
 source(file = "../R/2_preproces_data.R")
+source(file = "../R/9b_plot_function.R")
 ```
 
 ## Exploratory data analysis of Trias data
@@ -32,7 +33,9 @@ df_in %>%
   ggplot(aes(x = year, y = nobs)) + geom_point()
 ```
 
-De observaties voor 1950 laten we weg. Ze zijn niet nodig voor de analyse (data van 1950 tot nu is meer dan lang genoeg).
+De observaties voor 1950 laten we weg. Voor 1950 is er geen systematische opvolging
+van (invasieve) soorten.
+
 De laatste twee jaar (2018, 2019) is er duidelijk een effect van de vertraging voor het invoeren van de waarnemingen in GBIF. We bekijken de data daarom slechts tot en met 2017.
 
 ```{r preprocessing}
@@ -90,7 +93,7 @@ df_pp %>%
   ggplot(aes(x = year, y = nspec)) + geom_point()
 ```
 
-De data is als volgt:
+De variabelen zijn als volgt:
 
 - obs = het aantal observaties
 - ncells = het aantal cellen met minstens 1 observaties (obs >= 1)
@@ -126,6 +129,15 @@ De tijdreeksen zijn zeer uiteenlopend.
 
 De meeste tijdreeksen zijn vrij kort, met een beperkt aantal observaties of cellen
 per jaar. Enkele voorbeelden ter illustratie.
+
+```{r}
+df_pp %>%
+  filter(taxonKey %in% c("2115769", "3172100", "3686235", "4048240")) %>%
+  left_join(spec_names, by = "taxonKey") %>%
+  ggplot(aes(x = year, y = ncells)) + geom_line(colour = "grey") +
+    geom_point() + 
+  facet_wrap(~spn, nrow = 2, scales = "free_y")
+```
 
 ```{r}
 

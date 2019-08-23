@@ -15,28 +15,33 @@ preproc <- function(df_in, df_bl, spec_names, firstyear, lastyear){
     group_by(taxonKey, year) %>%
     summarise(ncells = n(),
               obs = sum(n))
-  #### Gaps
-  # spread and gather on ncells to add the years with 0 observations
-  df_in3 <- df_in2 %>%
-    dplyr::select(-obs) %>%
-    spread(key = taxonKey, value = ncells) %>%
-    gather(key = taxonKey, value = ncells, -year)
 
-  # Remove all zeros before first observation. Define the first year with
-  # data (> 0) and drop all records before that year.
-  # Join again the occurence data and replace NA's by 0
-  df_in3 <- df_in3 %>%
-    filter(ncells > 0) %>%
+  # Years without observation of the species have no records
+  # create data frame with all taxonkeys and all possible years
+  df_f <- expand.grid(taxonKey = unique(df_in$taxonKey),
+                      year = seq(from = firstyear, to = lastyear),
+                      stringsAsFactors = FALSE)
+
+  df_in3 <- df_in2 %>%
+    full_join(df_f, by = c("taxonKey", "year")) %>%
+    replace_na(list(ncells = 0, obs = 0)) %>%
+    arrange(taxonKey, year)
+
+  # Remove all zeros before the first observation.
+  # The first year is the first year with obs > 0.
+  # All zeroes before that year are dropped.
+  df_in4 <- df_in3 %>%
+    filter(obs > 0) %>%
     group_by(taxonKey) %>%
     summarise(minyear = min(year)) %>%
-    left_join(df_in2, by = "taxonKey") %>%
+    left_join(df_in3, by = "taxonKey") %>%
     mutate(drop = year < minyear) %>%
     filter(drop == FALSE) %>%
-    select(-drop, -minyear) %>%
-    left_join(select(df_in2, -ncells), by = c("taxonKey", "year")) %>%
-    mutate_all(list(~replace(., is.na(.), 0)))
+    dplyr::select(-drop, -minyear) %>%
+    arrange(taxonKey, year)
 
-  # Class occurrences (cobs) & cell class occurrences (ncobs) ~ year + class
+  # Add class occurrences (cobs) & cell class occurrences (ncobs)
+  # Warnings about introduction of NA's is ok, they're filtered later.
   df_bl2 <- df_bl %>%
     mutate(x = as.integer(substr(eea_cell_code, start = 5, stop = 8)),
            y = as.integer(substr(eea_cell_code, start = 10, stop = 13))) %>%
@@ -47,7 +52,7 @@ preproc <- function(df_in, df_bl, spec_names, firstyear, lastyear){
               ncobs = n())
 
   # Join class observations with species observations (via classKey)
-  df_pp <- df_in2 %>%
+  df_pp <- df_in4 %>%
     left_join(spec_names %>%
                 select(taxonKey, classKey),
               by = "taxonKey") %>%
