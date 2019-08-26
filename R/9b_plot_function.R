@@ -15,7 +15,7 @@ plot_ts <- function(df, y_axis = "ncells", ptitle = NULL,
   if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
 
   g <- ggplot(df, aes(x = year, y = get(y_axis))) + geom_line(colour = "grey") +
-    geom_point() + ggtitle(ptitle)
+    geom_point() + ggtitle(ptitle) + ylab(y_axis)
 
   if (saveplot == TRUE) {
     dir.create("./output/incr_em/", showWarnings = FALSE)

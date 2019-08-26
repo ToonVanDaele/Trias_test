@@ -1,0 +1,137 @@
+---
+title: "R03_gam"
+author: "Toon Van Daele"
+date: "26 augustus 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mgcv)
+library(gratia)
+source(file = "../R/9b_plot_function.R")
+```
+
+# Use of GAM
+
+We use the 'df_pp' data frame
+
+obs = number of observations
+ncells = number of cells
+cobs = number of observations of species class
+ncobs = number of cells (cobs >= 1)
+
+We use the (confidence intervals) of the first & second derivative of the smoother s(year) to indicate wether the species is increasing or not.
+
+```{r load-data}
+df_pp <- readRDS(file = "../data/df_pp.RDS")
+spec_names <- readRDS(file = "../data/spec_names.RDS")
+```
+
+
+## ncells ~ year
+
+The repsonse is number of cells.
+We use negative binomial (with loglink) as over/underdispersion can be exepected
+
+The number of cells is actually a proportion, but ncells <<<< tot. number of cells.
+
+```{r select-species}
+spec_id <- "2715482"
+df <- filter(df_pp, taxonKey == spec_id)
+spec_names %>% filter(taxonKey == spec_id) %>% .$spn
+fyear <- min(df$year) # First year
+lyear <- max(df$year) # Last year
+```
+
+
+```{r plot-time-series}
+plot_ts(df)
+```
+
+```{r overdispersion}
+# to be added
+```
+
+```{r gam-A}
+gA <- gam(ncells ~ s(year, m = 3, bs = "ts"), family = nb(),
+                data = df, method = "REML")
+```
+
+By default m = 2 which forces the 2nd derivative to 0 at the beginning and the endpoints of the smoother. m = 3 allows values >< 0 at the endpoints
+
+```{r}
+summary(gA)
+```
+
+```{r}
+appraise(gA)
+```
+
+```{r draw-smoother}
+draw(gA)
+```
+
+```{r prediction}
+df_n <- data.frame(year = seq(from = fyear, to = lyear,
+                                    length.out = (lyear - fyear) * 5))
+temp <- predict(object = gA, newdata = df_n, type = "iterms",
+                interval = "prediction", se.fit = TRUE)
+intercept <- unname(gA$coefficients[1])
+df_n$fit <- exp(temp$fit[,1] + intercept)
+df_n$ucl <- exp(temp$fit[,1] + intercept + temp$se.fit[,1] * 1.96)
+df_n$lcl <- exp(temp$fit[,1] + intercept - temp$se.fit[,1] * 1.96)
+```
+
+
+```{r derivatives-smoother}
+# Calculate first and second derivative + conf. interval
+deriv1 <- derivatives(gA, type = "central", order = 1, level = 0.8, 
+                      n = nrow(df_n), eps = 1e-4)
+deriv2 <- derivatives(gA, type = "central", order = 2, level = 0.8,
+                      n = nrow(df_n), eps = 1e-4)
+```
+
+```{r first derivative}
+draw(deriv1)
+```
+
+```{r second derivative}
+draw(deriv2)
+```
+
+
+```{r em_level}
+em_level function
+```
+
+
+## Adding observations from the species class
+
+We add the number of cells with observations from the species class 
+as a covariate.
+
+
+```{r}
+
+```
+
+
+## Adding temporal correlacton AR1
+
+Problem is that GAMM doesn't accept the negative binomial distribution. We try 
+GAMM with quasipoisson.
+
+```{r}
+
+```
+
+
+- C. obs ~ year + cobs  (neg. binom - loglink)
+- D. ncells ~ year + cobs  (neg. binom - loglink) ncells <<<< tot. number of cells
+- E. ncells ~ year + ncobs  (neg. binom - loglink) ncells <<<< tot. number of cells
+
+By year + cellID
+
+## 
+

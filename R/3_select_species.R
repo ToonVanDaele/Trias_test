@@ -1,7 +1,7 @@
 # Select species
 
 # The selection of species is mainly for testing purpose
-# Finally all species will pass the whole procedure
+# Finally all species will have to pass the whole procedure
 
 selspec <- function(df_pp){
 

@@ -12,21 +12,24 @@ source(file = "../R/2_preproces_data.R")
 source(file = "../R/9b_plot_function.R")
 ```
 
-## Exploratory data analysis of Trias data
+# Exploratory data analysis of Trias data
 
 This documents presents some basic data exploration for the TRIAS data.
 
 The data set is a dump from GBIF -> see github -> trias-project/occ-processing
 
 ```{r load data}
+# The RDS files are generated with the script '1_getdata.R'
 df_in <- readRDS(file = "../data/cube_belgium.RDS")
 df_bl <- readRDS(file = "../data/cube_belgium_baseline.RDS")
 spec_names <- readRDS(file = "../data/spec_names.RDS")
 ```
 
-Aantal observaties per jaar voor alle soorten
+## Raw data
 
-```{r}
+Number of observations by year (all species)
+
+```{r observations-by-year, fig.cap="Number of observations by year"}
 df_in %>%
   group_by(year) %>%
   summarise(nobs = sum(n)) %>%
@@ -36,7 +39,17 @@ df_in %>%
 De observaties voor 1950 laten we weg. Voor 1950 is er geen systematische opvolging
 van (invasieve) soorten.
 
-De laatste twee jaar (2018, 2019) is er duidelijk een effect van de vertraging voor het invoeren van de waarnemingen in GBIF. We bekijken de data daarom slechts tot en met 2017.
+De laatste twee jaar (2018, 2019) zijn er veel minder waarnemingen. Dit is het effect van de vertraging tussen waarneming en beschikbaarheid in GBIF.
+We bekijken de data voorlopig daarom slechts tot en met 2017.
+
+## Preprocessing
+
+Preprocessing generates 3 distinct data frames
+
+- df_pp = Number of observations (obs) and number of distinct cells (ncells) by
+year and species. The class to which the species belongs (classKey). The number of observations of the class (cobs) en number of distinct cells with observations of the class (ncobs) 
+
+- df_s = number of observations (n) by utmID, year and species. The class of the species (classKey) and the number of observations of the class (cobs).
 
 ```{r preprocessing}
 fyear <- 1950
@@ -44,19 +57,20 @@ lyear <- 2017
 
 df_pp <- preproc(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
 df_s <- preproc_s(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
-df_spa <- preproc_pa(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
 ```
 
-De tijdreeksen zijn pre-processed.
-Het beginjaar is het eerste jaar met observaties van een soort.
-Voor alle daaropvolgende jaren worden de tijdreeksen aangevuld met '0' 
-voor de jaren waarop er geen observaties van de soort zijn.
+The original data only contains gridcells and years with observations. Years without observation of a species are 'gaps' in the time series.
+
+The first year of the time series is the year with at least one observation.
+Zeros are added to all consecutive years without observations till the last year (i.e. 2017).
+
+## General overview
 
 ```{r}
 nb_species <- length(unique(df_pp$taxonKey))
 ```
 
-Total number of species `r nb_species`
+The total number of species in the dataset: `r nb_species`
 
 ```{r tlength}
 # Length of the time series 
@@ -72,9 +86,9 @@ df_temp <- df_pp %>%
 tlength0 <- df_temp %>% filter(tlength == 0) %>% .$nb
 ```
 
-Aantal tijdreeksen in functie van de lengte (2017 - eerste waarneming)
+Number of species by lengtht of the time series (i.e. 2017 - year of first observation)
 
-Voor veel soorten (`r tlength0`) is er slecht 1 jaar met waarnemingen (i.e. in het jaar 2017)
+There are quite a few species with only observations for the last year (`r tlength0`) (i.e. in het jaar 2017).
 
 ```{r plottlength}
 df_temp %>%
@@ -82,7 +96,7 @@ df_temp %>%
   ggplot(aes(x = tlength, y = nb)) + geom_point()
 ```
 
-Aantal soorten per jaar met minstens 1 observatie
+Number of species with at least one observation
 
 ```{r specyear}
 df_pp %>%
@@ -93,18 +107,17 @@ df_pp %>%
   ggplot(aes(x = year, y = nspec)) + geom_point()
 ```
 
-De variabelen zijn als volgt:
+Definition of the variables:
 
-- obs = het aantal observaties
-- ncells = het aantal cellen met minstens 1 observaties (obs >= 1)
+- obs = number of observations
+- ncells = number of cells with at least 1 observaties (obs >= 1)
 
+- cobs = number of observations of the species class
+- ncobs = number of cells with observation of the species class
 
-- cobs = aantal observaties van de klasse van de soort
-- ncobs = aantal cellen met observaties van de klasse van de soort
+The number of observations and number of cells with observation in the year 2017
 
-Het aantal observaties en aantal cellen met observaties voor 2017
-
-```{r}
+```{r number-of-observations-in-2017}
 df_pp %>%
   ungroup() %>%
   filter(year == 2017) %>%
@@ -113,9 +126,9 @@ df_pp %>%
   ggplot(aes(x = id, y = obs)) + geom_point() + scale_y_log10()
 ```
 
-Aantal cellen met observaties (ncells) voor 2017.
+Number of cells with observations (ncells) in 2017.
 
-```{r}
+```{r number-of-cells-with-observations-in-2017}
 df_pp %>%
   ungroup() %>%
   filter(year == 2017) %>%
@@ -124,22 +137,33 @@ df_pp %>%
   ggplot(aes(x = id, y = ncells)) + geom_point() + scale_y_log10()
 ```
 
+## Examples of some individual time series
 
-De tijdreeksen zijn zeer uiteenlopend.
+The behaviour of the time series is very diverse.
 
-De meeste tijdreeksen zijn vrij kort, met een beperkt aantal observaties of cellen
-per jaar. Enkele voorbeelden ter illustratie.
+Most time series are rather short with a limited number of observations per year. Many time series contain a lot of zeros (no observation of the species). Some examples:
 
-```{r}
+```{r number-of-cells}
+specs <- c("2115769", "3172100", "3686235", "4048240")
 df_pp %>%
-  filter(taxonKey %in% c("2115769", "3172100", "3686235", "4048240")) %>%
+  filter(taxonKey %in% specs) %>%
   left_join(spec_names, by = "taxonKey") %>%
   ggplot(aes(x = year, y = ncells)) + geom_line(colour = "grey") +
     geom_point() + 
   facet_wrap(~spn, nrow = 2, scales = "free_y")
 ```
 
-```{r}
-
+```{r number-of-observations}
+df_pp %>%
+  filter(taxonKey %in% c("2115769", "3172100", "3686235", "4048240")) %>%
+  left_join(spec_names, by = "taxonKey") %>%
+  ggplot(aes(x = year, y = obs)) + geom_line(colour = "grey") +
+    geom_point() + 
+  facet_wrap(~spn, nrow = 2, scales = "free_y")
 ```
+
+The number of cells (ncells) is lower or equal to the number of observations (obs >= ncells).
+
+
+
 

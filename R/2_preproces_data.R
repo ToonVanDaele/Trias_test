@@ -2,9 +2,8 @@
 
 # df_in, df_bl, spec_names
 #
-# df_s
 # df_pp <- time series with number of cells (ncells) and number of
-# occurrences (occ) ~ year + species
+#          occurrences (occ) ~ year + species
 # df_pp$ncells <- area of occupancy (number of cells) per species, year
 # df_pp$obs    <- sum of occurrences per species, year
 
