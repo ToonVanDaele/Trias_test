@@ -68,19 +68,25 @@ plot_ribbon <- function(df_n, df, ptitle, printplot = FALSE, saveplot = FALSE){
 plot_ribbon_em <- function(df_n, df, ptitle = NULL,
                            printplot = FALSE, saveplot = FALSE){
 
-  spec <- df[[1, "taxonKey"]]
   lyear <- max(df$year)
-  if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
+  if (is.null(ptitle)) {
+    spec <- df[[1, "taxonKey"]]
+    ptitle <- paste0(spec, "_", lyear)
+  }
 
-  g <- ggplot(df_n, aes(x = year, y = fit)) + geom_point(aes(colour = as.factor(em)), size = 2) +
+  g <- ggplot(df_n, aes(x = year, y = fit)) +
+    geom_line(colour = "grey") +
+    geom_point(aes(colour = as.factor(em)), size = 2) +
     geom_ribbon(aes(ymax = ucl, ymin = lcl),
                 fill = grey(0.5),
                 alpha = 0.4) +
     geom_point(data = df, aes(x = year, y = ncells)) +
-    scale_colour_manual(values = c("3" = "red", "2" = "orangered", "1" = "orange",
-                                   "0" = "grey50", "-1" = "yellow",
-                                   "-2" = "green", "-3" = "dark green")) +
+    scale_colour_manual(values = c("4" = "dark red", "3" = "red", "2" = "orangered", "1" = "orange",
+                                   "0" = "grey50", "-1" = "light yellow",
+                                   "-2" = "yellow", "-3" = "green", "-4" = "dark green")) +
     ggtitle(ptitle)
+
+  # color palette to be changed
 
   if (saveplot == TRUE) {
     dir.create("./output/incr_em/", showWarnings = FALSE)
@@ -121,4 +127,59 @@ plot_incr_em <- function(df, ptitle = NULL,
   return(g)
 }
 
+# Plot segmented regression
+
+plot_sr <- function(msm, df, printplot = FALSE){
+
+  spec <- df[1,"taxonKey"]  # Species name/code
+  #minyear <- min(df_sp$year)
+  lyear <- max(df$year)
+  mncells <- filter(df, year == lyear) %>% .$ncells
+
+  g <- ggplot(df_sp, aes(x = year, y = ncells)) + geom_point()
+
+  for (i in 1:(nrow(msm) - 1)) {
+    sgm_xb <- msm[i, 5]
+    sgm_xe <- msm[i + 1, 5]
+    sgm_yb <- msm[i, 4] + sgm_xb * msm[i,1]
+    sgm_ye <- sgm_yb + msm[i,1] * (sgm_xe - sgm_xb)
+
+    if (msm[i,2] > 0) {mycol = "red"}else{mycol = "green"}
+    xb <- sgm_xb #* attr(df_sp$year, 'scaled:scale') + attr(df_sp$year, 'scaled:center')
+    xe <- sgm_xe #* attr(df_sp$year, 'scaled:scale') + attr(df_sp$year, 'scaled:center')
+    g <- g + geom_segment(x = xb, y = exp(sgm_yb), xend = xe, yend = exp(sgm_ye), colour = mycol)
+  }
+
+  g <- g + ggtitle(paste0(spec, "_year: ", lyear, "_max_cells: ", mncells))
+
+  ggsave(filename = paste0("./output/figures/sr_", spec, "_", maxyear, ".png"), plot = g)
+  if (printplot == TRUE) plot(g)
+
+}
+
+# Plot INLA RW2 time series
+
+plot_inla_rw2 <- function(df_sp, printplot = FALSE){
+
+  spec <- df_sp[1,"taxonKey"]  # Species name/code
+  maxyear <- max(df_sp$year)
+  maxaantal <- max(df_sp$ncells)
+
+  g <- ggplot(data = df_sp, aes(y = ncells, x = year)) +
+    xlab("Year") + ylab("Aantal") +
+    theme(text = element_text(size=15)) +
+    geom_point(shape = 16, size = 2, col = "black") +
+    geom_line(aes(x = year, y = fit)) +
+    geom_ribbon(aes(x = year,
+                    ymax = fit_975,
+                    ymin = fit_025),
+                fill = grey(0.5),
+                alpha = 0.4) +
+    ggtitle(paste0(spec, "_till year: ", maxyear, "_max_cells: ", maxaantal))
+
+  ggsave(filename = paste0("./output/figures/inla_rw2_", spec, "_", maxyear, ".png"), plot = g)
+  if (printplot == TRUE) plot(g)
+
+
+}
 

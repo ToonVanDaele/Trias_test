@@ -1,6 +1,31 @@
 # Functions
 
-# Evaluate level of emerging
+# Calculate first and second derivative from smoother 'year'
+#
+# g gam model
+# length length of data frame for prediction
+#
+# return list with derivatives and emerging evaluation
+
+syear_deriv <- function(g, dfrows){
+
+  deriv1 <- derivatives(g, term = "year", type = "central",
+                        order = 1, level = 0.8, n = dfrows, eps = 1e-4)
+  deriv2 <- derivatives(g, term = "year", type = "central",
+                        order = 2, level = 0.8, n = dfrows, eps = 1e-4)
+
+  em = em_level(deriv1, deriv2)
+
+  return(list(deriv1 = deriv1, deriv2 = deriv2, em = em))
+
+}
+
+# Evaluate emerging based on first and second derivative
+#
+# df1 result from gratia::derivatives - order 1
+# df2 result fomr gratia::derivatives - order 2
+#
+# Return emerging evaluation
 
 em_level <- function(df1, df2){
 
@@ -37,58 +62,3 @@ em_level <- function(df1, df2){
 
 }
 
-# Plot segmented regression
-
-plot_sr <- function(msm, df, printplot = FALSE){
-
-  spec <- df[1,"taxonKey"]  # Species name/code
-  #minyear <- min(df_sp$year)
-  lyear <- max(df$year)
-  mncells <- filter(df, year == lyear) %>% .$ncells
-
-  g <- ggplot(df_sp, aes(x = year, y = ncells)) + geom_point()
-
-  for (i in 1:(nrow(msm) - 1)) {
-    sgm_xb <- msm[i, 5]
-    sgm_xe <- msm[i + 1, 5]
-    sgm_yb <- msm[i, 4] + sgm_xb * msm[i,1]
-    sgm_ye <- sgm_yb + msm[i,1] * (sgm_xe - sgm_xb)
-
-    if (msm[i,2] > 0) {mycol = "red"}else{mycol = "green"}
-    xb <- sgm_xb #* attr(df_sp$year, 'scaled:scale') + attr(df_sp$year, 'scaled:center')
-    xe <- sgm_xe #* attr(df_sp$year, 'scaled:scale') + attr(df_sp$year, 'scaled:center')
-    g <- g + geom_segment(x = xb, y = exp(sgm_yb), xend = xe, yend = exp(sgm_ye), colour = mycol)
-  }
-
-  g <- g + ggtitle(paste0(spec, "_year: ", lyear, "_max_cells: ", mncells))
-
-  ggsave(filename = paste0("./output/figures/sr_", spec, "_", maxyear, ".png"), plot = g)
-  if (printplot == TRUE) plot(g)
-
-}
-
-# Plot INLA RW2 time series
-
-plot_inla_rw2 <- function(df_sp, printplot = FALSE){
-
-  spec <- df_sp[1,"taxonKey"]  # Species name/code
-  maxyear <- max(df_sp$year)
-  maxaantal <- max(df_sp$ncells)
-
-  g <- ggplot(data = df_sp, aes(y = ncells, x = year)) +
-    xlab("Year") + ylab("Aantal") +
-    theme(text = element_text(size=15)) +
-    geom_point(shape = 16, size = 2, col = "black") +
-    geom_line(aes(x = year, y = fit)) +
-    geom_ribbon(aes(x = year,
-                    ymax = fit_975,
-                    ymin = fit_025),
-                fill = grey(0.5),
-                alpha = 0.4) +
-    ggtitle(paste0(spec, "_till year: ", maxyear, "_max_cells: ", maxaantal))
-
-  ggsave(filename = paste0("./output/figures/inla_rw2_", spec, "_", maxyear, ".png"), plot = g)
-  if (printplot == TRUE) plot(g)
-
-
-}

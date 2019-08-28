@@ -1,4 +1,15 @@
-### Method GAM
+### TRIAS - Method GAM
+
+# df dataframe with time serie for one species
+#
+# return list with 4 elements
+# df original dataframe
+# em dataframe with only one row indicating emerging status for the last year
+# model the whole gam model
+# df_n prediction data frame
+# plot ggplot figure with original data and interpretation of emerging status
+# deriv1, deriv2 dataframes with 1st & 2nd derivatives of smoother 'year'
+# result result of try (to capture errors)
 
 spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
 

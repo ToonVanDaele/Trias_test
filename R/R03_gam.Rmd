@@ -9,70 +9,69 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(mgcv)
 library(gratia)
+library(tidyverse)
+source(file = "../R/9_function.R")
 source(file = "../R/9b_plot_function.R")
 ```
 
-# Use of GAM
+# GAM
 
-We use the 'df_pp' data frame
+We use the (confidence intervals) of the first & second derivative of the smoother s(year) to indicate wether the species is increasing or not. GAM in mgcv package is very robust and flexible.
 
-obs = number of observations
-ncells = number of cells
-cobs = number of observations of species class
-ncobs = number of cells (cobs >= 1)
+We use the 'df_pp' data frame:
 
-We use the (confidence intervals) of the first & second derivative of the smoother s(year) to indicate wether the species is increasing or not.
+- obs = number of observations
+- ncells = number of cells
+- cobs = number of observations of species class
+- ncobs = number of cells (cobs >= 1)
 
-```{r load-data}
+```{r load-preprocessed-data, include=FALSE}
 df_pp <- readRDS(file = "../data/df_pp.RDS")
 spec_names <- readRDS(file = "../data/spec_names.RDS")
 ```
 
-
-## ncells ~ year
-
-The repsonse is number of cells.
-We use negative binomial (with loglink) as over/underdispersion can be exepected
-
-The number of cells is actually a proportion, but ncells <<<< tot. number of cells.
-
 ```{r select-species}
-spec_id <- "2715482"
+spec_id <- "2206086" #"1718308" #"2715482"
 df <- filter(df_pp, taxonKey == spec_id)
-spec_names %>% filter(taxonKey == spec_id) %>% .$spn
+sp_n <- spec_names %>% filter(taxonKey == spec_id) %>% .$spn
 fyear <- min(df$year) # First year
 lyear <- max(df$year) # Last year
 ```
+- species id: `r spec_id`
+- species name: `r sp_n`
 
-
-```{r plot-time-series}
+```{r plot-time-series, include=FALSE}
 plot_ts(df)
 ```
 
-```{r overdispersion}
-# to be added
-```
+
+## Model A: ncells ~ year
+
+- The response is number of cells.
+- Negative binomial (with loglink) as over/underdispersion is exepected very often.
+- The number of cells is actually a proportion of a total number of possible cells, but the number of cells is always much smaller than the total number of cells.
 
 ```{r gam-A}
-gA <- gam(ncells ~ s(year, m = 3, bs = "ts"), family = nb(),
+gA <- gam(ncells ~ s(year, m = 3, bs = "tp"), family = nb(),
                 data = df, method = "REML")
 ```
 
 By default m = 2 which forces the 2nd derivative to 0 at the beginning and the endpoints of the smoother. m = 3 allows values >< 0 at the endpoints
 
-```{r}
+```{r summary-A}
 summary(gA)
 ```
 
-```{r}
+```{r plots-A}
 appraise(gA)
 ```
 
-```{r draw-smoother}
+
+```{r draw-smoothers-A}
 draw(gA)
 ```
 
-```{r prediction}
+```{r prediction-A}
 df_n <- data.frame(year = seq(from = fyear, to = lyear,
                                     length.out = (lyear - fyear) * 5))
 temp <- predict(object = gA, newdata = df_n, type = "iterms",
@@ -84,46 +83,114 @@ df_n$lcl <- exp(temp$fit[,1] + intercept - temp$se.fit[,1] * 1.96)
 ```
 
 
-```{r derivatives-smoother}
+```{r derivatives-smoother-A}
 # Calculate first and second derivative + conf. interval
-deriv1 <- derivatives(gA, type = "central", order = 1, level = 0.8, 
-                      n = nrow(df_n), eps = 1e-4)
-deriv2 <- derivatives(gA, type = "central", order = 2, level = 0.8,
-                      n = nrow(df_n), eps = 1e-4)
+gderiv <- syear_deriv(g = gA, dfrows = nrow(df_n))
+draw(gderiv[["deriv1"]])
 ```
 
-```{r first derivative}
-draw(deriv1)
-```
-
-```{r second derivative}
-draw(deriv2)
+```{r second derivative-A}
+draw(gderiv[["deriv2"]])
 ```
 
 
-```{r em_level}
-em_level function
+
+```{r em_level-A}
+df_n <- bind_cols(df_n, gderiv[["em"]])
+
+# Create plot with conf. interval + colour for emerging status
+plot_ribbon_em(df_n = df_n, df = df, printplot = FALSE, saveplot = FALSE)
 ```
 
 
-## Adding observations from the species class
+## Model B: obs ~ s(year) + s(cobs)
 
-We add the number of cells with observations from the species class 
-as a covariate.
+Include the number of cells with observations from the species class as a covariate to account for the search effort.
+
+Assumption: Variation of class ~ search effort. The data of the individual species have no influence on the data of the class (species <<<< class).
+
+This approach potentially allows to reduce the two year lag time (to be tested)!
+
+```{r plot-B-ts}
+df %>%
+  dplyr::select(year, obs, cobs) %>%
+  group_by(year) %>%
+  gather(key = type, value = n, -year) %>%
+  ggplot(aes(x = year, y = n)) + geom_point() + 
+    facet_wrap(~type, scales = "free_y")
+```
 
 
 ```{r}
-
+#GGally::ggpairs(df[,c("ncells", "year", "ncobs")])
+ggplot(df, aes(x = cobs, y = obs)) + geom_point()
 ```
 
 
-## Adding temporal correlacton AR1
+```{r}
+gB <- gam(obs ~ s(year, m = 3, bs = "tp") +
+            s(cobs, bs = "ts"), family = nb(),
+                data = df, method = "REML")
+```
 
-Problem is that GAMM doesn't accept the negative binomial distribution. We try 
+
+```{r summary-B}
+summary(gB)
+```
+
+```{r plots-B}
+appraise(gB)
+```
+
+```{r draw-smoothers-B}
+draw(gB)
+```
+
+```{r prediction-B}
+df_n <- df
+temp <- predict(object = gB, newdata = df_n, type = "iterms",
+                interval = "prediction", se.fit = TRUE)
+intercept <- unname(gB$coefficients[1])
+df_n$fit <- exp(temp$fit[,1] + intercept)
+df_n$ucl <- exp(temp$fit[,1] + intercept + temp$se.fit[,1] * 1.96)
+df_n$lcl <- exp(temp$fit[,1] + intercept - temp$se.fit[,1] * 1.96)
+```
+
+
+```{r derivatives-smoother-B}
+# Calculate first and second derivative + conf. interval
+gderiv <- syear_deriv(g = gB, dfrows = nrow(df_n))
+
+```
+
+```{r first derivative-B}
+draw(gderiv[["deriv1"]])
+```
+
+```{r second derivative-B}
+draw(gderiv[["deriv2"]])
+```
+
+
+```{r em_level-B}
+df_n <- bind_cols(df_n, gderiv[["em"]])
+
+# Plot with conf. interval + colour for emerging status
+plot_ribbon_em(df_n = df_n, df = df, printplot = FALSE, saveplot = FALSE)
+```
+
+
+
+## Model C: Adding temporal correlacton AR1
+
+GAMM doesn't accept the negative binomial distribution. We try 
 GAMM with quasipoisson.
 
 ```{r}
-
+gC <- gamm(ncells ~ s(year, k = maxk, m = 3, bs = "ts"),
+           correlation = corAR1(),
+           family = quasipoisson,
+           data = df, method = "REML")
 ```
 
 

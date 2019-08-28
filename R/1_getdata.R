@@ -1,6 +1,6 @@
-## Load data from Github and store as RDS file
+## TRIAS - Load data from Github and store as RDS file
 
-# Data 'cube_belgium'
+# Get the data 'cube_belgium'
 df <- read.table(file = "./data/cube_belgium.tsv",
                  header = TRUE, stringsAsFactors = FALSE)
 
@@ -10,7 +10,7 @@ df <- select(df, -min_coord_uncertainty)
 saveRDS(object = df, file = "./data/cube_belgium.RDS")
 
 
-# Data 'cube_belgium_baseline'
+# Get data 'cube_belgium_baseline'
 df_bl <- read.table(file = "./data/cube_belgium_baseline.tsv",
                     header = TRUE, stringsAsFactors =  FALSE)
 
@@ -28,5 +28,6 @@ spec_names <- data.frame(taxonKey = speclist,
                          classKey = map_chr(speclist, ~ name_usage(.)$data$classKey),
                          stringsAsFactors = FALSE)
 
+# write species list with name (canonical), taxon-, kingdom- and classKey
 saveRDS(object = spec_names, file = "./data/spec_names.RDS")
 

@@ -121,8 +121,6 @@ main_incr_df <- df_sp %>%
   left_join(spec_names, by = "taxonKey")
 
 
-seltax <- c("1031394")
-
 for (tax in taxl){
   df <- main_incr_df %>%
     filter(taxonKey == tax)
@@ -148,7 +146,6 @@ main_incr_df %>%
   group_by(em) %>%
   filter(year == 2017) %>%
   count()
-
 
 more_one_cells <- main_incr_df %>%
   ungroup() %>%

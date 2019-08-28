@@ -1,7 +1,6 @@
 # Method decision tree
 
-# The decision wether a species is emerging or not
-# is based on multiple simple decision rules.
+# Decision of emerging status based on some decision rules.
 
 spDT <- function(df){
 

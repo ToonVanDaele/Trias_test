@@ -48,8 +48,11 @@ lyear <- 2017
 
 df_pp <- preproc(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
 df_s <- preproc_s(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
-df_spa <- preproc_pa(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
+#df_spa <- preproc_pa(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
 
+# Save preprocessed data
+saveRDS(df_pp, file = "./data/df_pp.RDS")
+saveRDS(df_s, file = "./data/df_s.RDS")
 
 df_pp %>%
   filter(taxonKey == "3172100") %>%

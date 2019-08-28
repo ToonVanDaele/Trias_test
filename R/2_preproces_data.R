@@ -1,11 +1,14 @@
-#### Preprocessing and filtering of Beglium_cube data
+#### TIRAS - preprocessing and filtering of Belgium_cube data
 
-# df_in, df_bl, spec_names
+# df_in raw data (from getdata.R)
+# df_bl baseline data (species class) (from getdata.R)
+# spec_names list with species names (from getdata.R)
 #
-# df_pp <- time series with number of cells (ncells) and number of
-#          occurrences (occ) ~ year + species
-# df_pp$ncells <- area of occupancy (number of cells) per species, year
-# df_pp$obs    <- sum of occurrences per species, year
+#
+# return df_pp time series with number of cells (ncells) and number of
+#          occurrences (occ) ~ year + species.
+#     df_pp$ncells <- area of occupancy (number of cells) per species, year
+#     df_pp$obs    <- sum of occurrences per species, year
 
 preproc <- function(df_in, df_bl, spec_names, firstyear, lastyear){
 
@@ -63,6 +66,17 @@ preproc <- function(df_in, df_bl, spec_names, firstyear, lastyear){
 
 ## Preprocessing baseline data by year, cell_code, kingdomKey
 
+# df_in raw data (from getdata.R)
+# df_bl baseline data (species class) (from getdata.R)
+# spec_names list with species names (from getdata.R)
+# firstyear first year of time series (1950)
+# lastyear last year to be considered (2017)
+#
+# return df_pp time series with number of cells (ncells) and number of
+#          occurrences (occ) ~ year + species.
+
+
+
 preproc_s <- function(df_in, df_bl, spec_names, firstyear, lastyear) {
 
   df_in2 <- df_in %>%
@@ -78,7 +92,7 @@ preproc_s <- function(df_in, df_bl, spec_names, firstyear, lastyear) {
 }
 
 
-## Preprocessing for presence/absence
+## Preprocessing for presence/absence (not used)
 
 preproc_pa <- function(df_in, df_bl, spec_names, firstyear, lastyear) {
 
