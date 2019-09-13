@@ -2,21 +2,34 @@
 title: "R03_gam"
 author: "Toon Van Daele"
 date: "26 augustus 2019"
-output: html_document
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
 library(mgcv)
 library(gratia)
 library(tidyverse)
+opts_chunk$set(echo = TRUE)
 source(file = "../R/9_function.R")
 source(file = "../R/9b_plot_function.R")
 ```
 
 # GAM
 
-We use the (confidence intervals) of the first & second derivative of the smoother s(year) to indicate wether the species is increasing or not. GAM in mgcv package is very robust and flexible.
+We use the (confidence intervals) of the first & second derivative of the smoother s(year) as an indication wether the species is increasing or not.
+
+GAM in mgcv package is very robust and flexible.
 
 We use the 'df_pp' data frame:
 
@@ -37,26 +50,32 @@ sp_n <- spec_names %>% filter(taxonKey == spec_id) %>% .$spn
 fyear <- min(df$year) # First year
 lyear <- max(df$year) # Last year
 ```
-- species id: `r spec_id`
-- species name: `r sp_n`
 
-```{r plot-time-series, include=FALSE}
+__species id: `r spec_id`  (name: `r sp_n`)___
+
+```{r plot-time-series, echo=FALSE}
 plot_ts(df)
 ```
 
 
 ## Model A: ncells ~ year
 
-- The response is number of cells.
-- Negative binomial (with loglink) as over/underdispersion is exepected very often.
+- The response is ncells (number of cells with observation).
+- Negative binomial (with loglink) as overdispersion is exepected very often.
 - The number of cells is actually a proportion of a total number of possible cells, but the number of cells is always much smaller than the total number of cells.
 
+
+
+
 ```{r gam-A}
+# 2 modellen met verschillende aantal vrijheidsgraden.
+
+
 gA <- gam(ncells ~ s(year, m = 3, bs = "tp"), family = nb(),
                 data = df, method = "REML")
 ```
 
-By default m = 2 which forces the 2nd derivative to 0 at the beginning and the endpoints of the smoother. m = 3 allows values >< 0 at the endpoints
+By default m = 2. This forces the 2nd derivative to 0 at the endpoints of the smoother. m = 3 allows values >< 0 at the endpoints
 
 ```{r summary-A}
 summary(gA)
@@ -67,7 +86,7 @@ appraise(gA)
 ```
 
 
-```{r draw-smoothers-A}
+```{r draw-smoothers-A, fig.height= 3}
 draw(gA)
 ```
 
@@ -83,13 +102,13 @@ df_n$lcl <- exp(temp$fit[,1] + intercept - temp$se.fit[,1] * 1.96)
 ```
 
 
-```{r derivatives-smoother-A}
+```{r derivatives-smoother-A, fig.height = 3}
 # Calculate first and second derivative + conf. interval
 gderiv <- syear_deriv(g = gA, dfrows = nrow(df_n))
 draw(gderiv[["deriv1"]])
 ```
 
-```{r second derivative-A}
+```{r second derivative-A, fig.height = 3}
 draw(gderiv[["deriv2"]])
 ```
 
@@ -128,6 +147,15 @@ ggplot(df, aes(x = cobs, y = obs)) + geom_point()
 
 
 ```{r}
+
+# aantal waarnemingen van de soortgroep als offset ipv smoother
+# lineaire fit -> 
+
+# Op hokniveau -> hok als random intercept +  aantal waarneminge nvan de groep per hok en jaar
+
+
+
+
 gB <- gam(obs ~ s(year, m = 3, bs = "tp") +
             s(cobs, bs = "ts"), family = nb(),
                 data = df, method = "REML")
@@ -187,7 +215,7 @@ GAMM doesn't accept the negative binomial distribution. We try
 GAMM with quasipoisson.
 
 ```{r}
-gC <- gamm(ncells ~ s(year, k = maxk, m = 3, bs = "ts"),
+gC <- gamm(ncells ~ s(year, m = 3, bs = "ts"),
            correlation = corAR1(),
            family = quasipoisson,
            data = df, method = "REML")

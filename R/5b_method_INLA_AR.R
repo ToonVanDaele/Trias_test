@@ -59,8 +59,9 @@ spINLA <- function(df, printplot = FALSE, saveplot = FALSE){
   if (class(result) == "try-error") {
     df$fit <- df$ucl <- df$lcl <- out <- NA
     i2 <- df_n <- g <- NULL
+  }
 
   df_em <- tibble(taxonKey = spec, eyear = lyear, method_em = "INLA", em = out)
   return(list(df = df, em = df_em, model = i2, df_n = df_n, plot = g, result = result))
-  }
+
 }

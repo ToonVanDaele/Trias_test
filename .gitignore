@@ -48,3 +48,9 @@ rsconnect/
 
 #html
 *.html
+
+*.eps
+*.png
+*.pdf
+*.log
+*.tex

@@ -183,3 +183,14 @@ plot_inla_rw2 <- function(df_sp, printplot = FALSE){
 
 }
 
+
+## Plot a map
+
+plot_map <- function(df, year){
+
+  df %>%
+  filter(year == year) %>%
+  mutate(x = as.integer(substr(eea_cell_code, start = 5, stop = 8)),
+         y = as.integer(substr(eea_cell_code, start = 10, stop = 13))) %>%
+  plot(aes(x = x, y = y)) + geom_point
+}

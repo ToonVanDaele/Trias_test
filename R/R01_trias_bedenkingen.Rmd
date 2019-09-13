@@ -1,0 +1,52 @@
+---
+title: "Trias vragen en bedenkingen"
+author: "Toon Van Daele"
+date: "26 augustus 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## TRIAS - detection of 'emerging' species
+
+### Belangrijke eigenschappen / beperkingen:
+
+- Algoritme moet robuust zijn ten aanzien van zeer uiteenlopende tijdreeksen (lang/kort, verschillende soortgroepen, spreiding, sprongen, ...)
+- Bevattelijk (heldere regels via het algortime)
+- Afweging type I versus type II fout. (Relatief hoge type I fout is niet problematisch)
+- Algoritme moet eenvoudig toe te passen zijn op andere (Europese) regio's.
+
+### Enkele bedenkingen:
+
+- Emerging is niet gedefinieerd
+- GBIF data is een allegaartje van relatief gestructureerde data en citizen science data
+- Locatiegegevens zijn zeer uiteenlopend -> geagregeerd tot 1km hokken
+
+- extreem weinig data -> 'beslisboom' bijvoorbeeld: 
+  - eerste waarneming -> altijd waarschuwing
+  - 1 meting, daarna 4 jaar geen -> geen probleem).
+
+
+### Verschillende benaderingen uitgeprobeerd:
+  - __piecewise regression__: Initieel voorstel. Zeer eenvoudig te interpreteren, maar het package 'segmented' is erg onstabiel. De keuze van het aantal en de locatie van de breakpoints leidt vaak tot convergentieproblemen.
+  
+  - __GAM__: flexibel en robuust. Wijzigen van de opties voor de smoother levert uiteenlopende resultaten ('tp', 'ts', m, k, ...). Moeilijk om een juiste keuze te maken voor alle tijdreeksen.
+  
+  - __INLA WR2__: geeft vrijwel hetzelfde als GAM. Laat toe om spatiale correlatie in te brengen, maar de data is hiervoor meestal te beperkt en erg rekenintensief. 
+
+
+Het is ook mogelijk om meerdere benaderingen te combineren.
+
+### Vragen:
+
+- Interpretatie van de tijdreeks op basis van 1ste en 2de afgeleide smoother. Alternatieve methodes?
+
+- Geautomatiseerde methode voor het afwegen van geschikt model (distributie, corAR, corSP, zip, ...)
+
+- keuze tussen modelmatig of besliboom. Numeriek criterium?
+
+- combineren van modelmatige resultaten en beslisboom (categoriën).
+
+- protected areas. Onderscheid tussen soorten in protected areas en daarbuiten. (crassula helmsie)

@@ -9,15 +9,14 @@ spPR <- function(df){
   lyear <- max(df$year)
   spec <- df[[1,1]]
   spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn) %>% as.character()
-  print(paste0(spec, "_", lyear))
 
   result <- try({
     lm <- glm.nb(ncells ~ year, data = df)
 
     # The automatic procedure has tendency to overestimate the number of breakpoints
-    # (help file segmented - Especially when neg. binomial distribution is used.)
+    # (help file segmented)
 
-    lm_s1 <- segmented(obj = lm, seg.Z = ~year, ,psi = list(year = NA),
+    lm_s1 <- segmented(obj = lm, seg.Z = ~ year, psi = list(year = NA),
                        control = seg.control(stop.if.error = FALSE,
                                              n.boot = 0, it.max = 50, K = 5))
     #summary(lm_s1)  #plot.segmented(lm_s1)   #draw.history(lm_s1, "year")

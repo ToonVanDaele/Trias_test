@@ -28,7 +28,8 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
 
       maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade
       #mvalue <- min(maxk - 1, 3)
-      g1 <- gam(ncells ~ s(year, k = maxk, m = 3, bs = "ts"), family = nb(),
+      g1 <- gam(ncells ~ s(year, k = maxk, m = 3, bs = "tp"),
+                  family = nb(),
                 data = df, method = "REML")
 
       # ? GAMM werkt niet met negatief binomiaal?
@@ -84,6 +85,8 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
     deriv1 <- deriv2 <- result <- NULL
 
   }
+
+  # p-waarde van de smoother te groot -> output NA toevoegen
 
   df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = "GAM", em = out)
   return(list(df = df, em = df_em, model = g1, df_n = df_n,

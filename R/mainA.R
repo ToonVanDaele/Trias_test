@@ -1,7 +1,8 @@
-### Main2
+### Main
 
 # Approaches for the analysis
 
+# dataframe df_pp:
 # obs = number of observations
 # ncells = number of cells (obs >= 1)
 # cobs = number of observations of the species class
@@ -13,6 +14,7 @@
 # D. ncells ~ year + cobs  (neg. binom - loglink) ncells <<<< tot. number of cells
 # E. ncells ~ year + ncobs  (neg. binom - loglink) ncells <<<< tot. number of cells
 
+# df_s:
 #### By year + cellID
 # obs = number of observations
 # pobs = presence / absence
@@ -33,6 +35,9 @@ library(tidyverse)
 source(file = "./R/2_preproces_data.R")
 source(file = "./R/3_select_species.R")
 source(file = "./R/3b_incr_times_series.R")
+source(file = "./R/4_method_decision_tree.R")
+source(file = "./R/5a_method_piecewise_regression.R")
+source(file = "./R/5b_method_INLA_AR.R")
 source(file = "./R/5c_method_GAM.R")
 source(file = "./R/9_function.R")
 source(file = "./R/9b_plot_function.R")
@@ -58,28 +63,13 @@ df_pp %>%
   filter(taxonKey == "3172100") %>%
   ggplot(aes(x = year, y = obs)) + geom_point() + geom_line()
 
-df_pp %>%
-  filter(taxonKey == "3172100") %>%
-  ggplot(aes(x = year, y = cobs)) + geom_point() + geom_line()
-
-
-df_pp %>%
-  filter(taxonKey == "3172100") %>%
-  ggplot(aes(x = cobs, y = obs)) + geom_point()
-
-
-df_pp %>%
-  filter(taxonKey == "3172100") %>%
-  ggplot(aes(x = ncobs, y = ncells)) + geom_point() + geom_smooth()
 
 
 
 
-#listlenght = aanal soorten per jaar en per cel  smoother
-
-#enkel cellen en jaren waar minstens 10 soorten gezien zijn
+#listlenght = aantal soorten per jaar en per cel  smoother
+# enkel cellen en jaren waar minstens 10 soorten gezien zijn
 
 # gamxy
 
-# smoother -> listlength
 # x= aantal soorten gezien per cel,  y = kans op voorkomen per cel

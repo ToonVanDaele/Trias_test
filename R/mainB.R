@@ -5,6 +5,8 @@
 df_sp <- selspec(df_pp) %>%
   group_by(taxonKey)
 
+length(unique(df_sp$taxonKey))
+
 # Get a vector with the group names
 taxl <- df_sp %>%
   group_keys() %>%
@@ -13,10 +15,10 @@ taxl <- df_sp %>%
 # plot time series
 g <- df_sp %>%
   group_split() %>%
-  map(.f = plot_ts, printplot = TRUE, saveplot = TRUE) %>%
+  map(.f = plot_ts, printplot = FALSE, saveplot = TRUE) %>%
   set_names(taxl)
 
-#plot(g[["2115769"]])
+#plot(g[["2206086"]])
 
 # Select number of years for evaluation
 df_spe <- incrts(df_sp, backward = 2) %>%
@@ -35,12 +37,14 @@ taxl_incr <- df_spe %>%
 # on full time series
 dt_result <- df_sp %>%
   group_split() %>%
-  map(.f = spDT)
+  map(.f = spDT) %>%
+  set_names(taxl)
 
 # on increasing time series (unique species & evaluation year)
 dt_result_incr <- df_spe %>%
   group_split() %>%
-  map(.f = spDT)
+  map(.f = spDT) %>%
+  set_names(taxl_incr)
 
 # Select only the 'em' output for each taxonKey & eyear combination
 dt_em <- df_sp %>%
@@ -53,7 +57,7 @@ dt_em_plot <- dt_em %>%
   map(.f = plot_incr_em, saveplot = FALSE) %>%
   set_names(taxl)
 
-#plot(dt_em_plot[["8542672"]])
+#plot(dt_em_plot[["2206086"]])
 
 
 ## GAM
@@ -85,15 +89,15 @@ emGAM %>%
   group_by(em) %>%
   count()
 
-
 gam_main <- df_sp %>%
   left_join(emGAM, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
 
 plot_emGAM <- gam_main %>%
   group_split() %>%
-  map(plot_incr_em5, saveplot = FALSE)
+  map(plot_incr_em, saveplot = FALSE) %>%
+  set_names(taxl)
 
-
+plot(plot_emGAM$`2206086`)
 
 ### Join outputs from different methods
 
@@ -165,5 +169,7 @@ more_one_cells <- main_incr_df %>%
 # 1718308 - emerging  = ok
 
 
-
-
+# Voorbeelden effect van protected areas
+# 8035075 Crassula helmsii -> typische pioniersoort in beschermde gebieden en emerging.
+# 3033868 Berberis aquifolium -> invasief in de duinen. Daarbuiten eerder stabiel
+# 3190653 Ailanthus altissima -> geen effect van protected areas
