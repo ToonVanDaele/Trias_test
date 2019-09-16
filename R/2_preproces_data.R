@@ -1,82 +1,5 @@
 #### TIRAS - preprocessing and filtering of Belgium_cube data
 
-# Preprocessing data by ~ year + taxonKey
-#
-# df_in raw data (from getdata.R)
-# df_bl baseline data (species class) (from getdata.R)
-# spec_names list with species names (from getdata.R)
-# firstyear first year of data to filter
-# lastyear last year of data to filter
-#
-# return df_pp time series with number of cells (ncells) and number of
-#          observations (obs) ~ year + species.
-
-preproc <- function(df_in, df_bl, spec_names, firstyear, lastyear){
-
-  df_in2 <- df_in %>%
-    filter( year > firstyear & year <= lastyear) %>%
-    group_by(taxonKey, year) %>%
-    summarise(ncells = n(),
-              obs = sum(n))
-
-  # Years without observation of the species have no records
-  # create data frame with all taxonkeys and all possible years
-  df_f <- expand.grid(taxonKey = unique(df_in$taxonKey),
-                      year = seq(from = firstyear, to = lastyear),
-                      stringsAsFactors = FALSE)
-
-  df_in3 <- df_in2 %>%
-    full_join(df_f, by = c("taxonKey", "year")) %>%
-    replace_na(list(ncells = 0, obs = 0)) %>%
-    arrange(taxonKey, year)
-
-  # Remove all zeros before the first observation.
-  # The first year is the first year with obs > 0.
-  # All zeroes before that year are dropped.
-  df_in4 <- df_in3 %>%
-    filter(obs > 0) %>%
-    group_by(taxonKey) %>%
-    summarise(minyear = min(year)) %>%
-    left_join(df_in3, by = "taxonKey") %>%
-    mutate(drop = year < minyear) %>%
-    filter(drop == FALSE) %>%
-    dplyr::select(-drop, -minyear) %>%
-    arrange(taxonKey, year)
-
-  # Add class occurrences (cobs) & cell class occurrences (ncobs)
-  # Warnings about introduction of NA's is ok, they're filtered later.
-
-  df_bl2 <- df_bl %>%
-    mutate(x = as.integer(substr(eea_cell_code, start = 5, stop = 8)),
-           y = as.integer(substr(eea_cell_code, start = 10, stop = 13))) %>%
-    filter(x >= 3768 & x <= 4079 & y >= 2926 & y <= 3236) %>%
-    filter(year > firstyear & year <= lastyear) %>%
-    group_by(classKey, year) %>%
-    summarise(cobs = sum(n),
-              ncobs = n())
-
-  # Add classKey
-  df_in5 <- df_in4 %>%
-    left_join(spec_names %>%
-                dplyr::select(taxonKey, classKey),
-              by = "taxonKey")
-
-  # The number of observations of invasive species in each class
-  df_bl3 <- df_in5 %>%
-    group_by(classKey, year) %>%
-    summarise(invobs = sum(obs)) %>%
-    left_join(df_bl2,
-              by = c("classKey", "year")) %>%
-    replace_na(list(invobs = 0))
-
-  # Join class observations with species observations (via classKey)
-  df_pp <- df_in5 %>%
-    left_join(df_bl3, by = c("classKey", "year")) %>%
-    mutate(cobs = cobs - invobs)
-
-  return(df_pp)
-}
-
 
 ## Preprocessing data by ~ year + taxonKey + cellID
 
@@ -89,14 +12,14 @@ preproc <- function(df_in, df_bl, spec_names, firstyear, lastyear){
 # return df_pp time series with number of cells (ncells) and number of
 #          observations (obs) ~ year + species + cellID
 
-preproc_s <- function(df_in, df_bl, spec_names,
+preproc_s <- function(df_in, df_bl, spec_names, df_xy,
                       firstyear = 1950, lastyear = 2017) {
 
   # Select observations within the requested period (years) and
   # within Belgium (rectangle). Records outside belgium should not be here.
   df_in2 <- df_in %>%
-    mutate(x = as.integer(substr(eea_cell_code, start = 5, stop = 8)),
-           y = as.integer(substr(eea_cell_code, start = 10, stop = 13))) %>%
+    left_join(df_xy,
+              by = "eea_cell_code") %>%
     filter(year > firstyear & year <= lastyear) %>%
     filter(x >= 3768 & x <= 4079 & y >= 2926 & y <= 3236) %>%
     dplyr::select(taxonKey, year, eea_cell_code, obs = n)
@@ -116,6 +39,8 @@ preproc_s <- function(df_in, df_bl, spec_names,
     mutate(cobs = n - ispec) %>%
     mutate(new_cobs = if_else(cobs < 0, 0, cobs)) %>%
     select(year, eea_cell_code, classKey, cobs = new_cobs)
+
+  df_bl2$cobs <- as.integer(df_bl2$cobs)
 
   # The second last line corrects an error which results in negative cobs.
   # i.e. more observed invasive species than total observed species.
@@ -138,7 +63,10 @@ preproc_s <- function(df_in, df_bl, spec_names,
     left_join(df_by, by = "taxonKey")
 
   # Create a time series from begin_year till lastyear for each cell and species.
-  # Only zeros here. No observations yet.
+  # Only empty records here. No data yet.
+
+  # Remove unused data frames to release some memory
+  remove(df_in, df_cc, df_bl)
 
   epg <- function(eea_cell_code, taxonKey, begin_year, lastyear) {
 
@@ -149,11 +77,11 @@ preproc_s <- function(df_in, df_bl, spec_names,
 
   }
 
-  df_zero <- pmap_dfr(df_cc2, .f = epg, lastyear = lastyear)
+  df_s <- pmap_dfr(df_cc2, .f = epg, lastyear = lastyear)
 
   # Joint observations of the class ~ cell_code + year
   # and the observations of invasive species ~ cell_code + year + taxonKey
-  df_zero <- df_zero %>%
+  df_s <- df_s %>%
     left_join(spec_names %>%
                 dplyr::select(taxonKey, classKey),
               by = "taxonKey") %>%
@@ -161,14 +89,35 @@ preproc_s <- function(df_in, df_bl, spec_names,
                 dplyr::select(year, eea_cell_code, classKey, cobs),
               by = c("year", "eea_cell_code", "classKey")) %>%
     left_join(df_in2,
-              by = c("taxonKey", "year", "eea_cell_code"))
-
-
-  df_zero <- df_zero %>%
+              by = c("taxonKey", "year", "eea_cell_code")) %>%
     replace_na(list(cobs = 0, obs = 0))
 
 }
 
+
+# Preprocessing data summarised over all cells
+
+preproc_pp <- function(df_s){
+
+  df_1 <- df_s %>%
+    filter(obs > 0) %>%
+    group_by(taxonKey, year) %>%
+    summarise(obs = sum(obs),
+              cobs = sum(cobs),
+              ncells = n_distinct(eea_cell_code))
+
+  df_2 <- df_s %>%
+    filter(cobs > 0) %>%
+    group_by(taxonKey, year) %>%
+    summarise(ncobs = n_distinct(eea_cell_code))
+
+  df_pp <- df_1 %>%
+    left_join(df_2,
+              by = c("taxonKey", "year")) %>%
+    replace_na(list(ncobs = 0))
+
+  return(df_pp)
+}
 
 
 ## Preprocessing for presence/absence (not used)
@@ -215,3 +164,79 @@ preproc_s <- function(df_in, df_bl, spec_names,
 #
 #
 
+# Preprocessing data by ~ year + taxonKey
+#
+# df_in raw data (from getdata.R)
+# df_bl baseline data (species class) (from getdata.R)
+# spec_names list with species names (from getdata.R)
+# firstyear first year of data to filter
+# lastyear last year of data to filter
+#
+# return df_pp time series with number of cells (ncells) and number of
+#          observations (obs) ~ year + species.
+
+# preproc <- function(df_in, df_bl, spec_names, firstyear, lastyear){
+#
+#   df_in2 <- df_in %>%
+#     filter( year > firstyear & year <= lastyear) %>%
+#     group_by(taxonKey, year) %>%
+#     summarise(ncells = n(),
+#               obs = sum(n))
+#
+#   # Years without observation of the species have no records
+#   # create data frame with all taxonkeys and all possible years
+#   df_f <- expand.grid(taxonKey = unique(df_in$taxonKey),
+#                       year = seq(from = firstyear, to = lastyear),
+#                       stringsAsFactors = FALSE)
+#
+#   df_in3 <- df_in2 %>%
+#     full_join(df_f, by = c("taxonKey", "year")) %>%
+#     replace_na(list(ncells = 0, obs = 0)) %>%
+#     arrange(taxonKey, year)
+#
+#   # Remove all zeros before the first observation.
+#   # The first year is the first year with obs > 0.
+#   # All zeroes before that year are dropped.
+#   df_in4 <- df_in3 %>%
+#     filter(obs > 0) %>%
+#     group_by(taxonKey) %>%
+#     summarise(minyear = min(year)) %>%
+#     left_join(df_in3, by = "taxonKey") %>%
+#     mutate(drop = year < minyear) %>%
+#     filter(drop == FALSE) %>%
+#     dplyr::select(-drop, -minyear) %>%
+#     arrange(taxonKey, year)
+#
+#   # Add class occurrences (cobs) & cell class occurrences (ncobs)
+#   # Warnings about introduction of NA's is ok, they're filtered later.
+#
+#   df_bl2 <- df_bl %>%
+#     mutate(x = as.integer(substr(eea_cell_code, start = 5, stop = 8)),
+#            y = as.integer(substr(eea_cell_code, start = 10, stop = 13))) %>%
+#     filter(x >= 3768 & x <= 4079 & y >= 2926 & y <= 3236) %>%
+#     filter(year > firstyear & year <= lastyear) %>%
+#     group_by(classKey, year) %>%
+#     summarise(cobs = sum(n),
+#               ncobs = n())
+#
+#   # Add classKey
+#   df_in5 <- df_in4 %>%
+#     left_join(spec_names %>%
+#                 dplyr::select(taxonKey, classKey),
+#               by = "taxonKey")
+#
+#   # The number of observations of invasive species in each class
+#   df_bl3 <- df_in5 %>%
+#     group_by(classKey, year) %>%
+#     summarise(invobs = sum(obs)) %>%
+#     left_join(df_bl2,
+#               by = c("classKey", "year")) %>%
+#     replace_na(list(invobs = 0))
+#
+#   # Join class observations with species observations (via classKey)
+#   df_pp <- df_in5 %>%
+#     left_join(df_bl3, by = c("classKey", "year")) %>%
+#     mutate(cobs = cobs - invobs)
+#
+#   return(df_pp)
+# }

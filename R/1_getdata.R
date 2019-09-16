@@ -31,3 +31,13 @@ spec_names <- data.frame(taxonKey = speclist,
 # write species list with name (canonical), taxon-, kingdom- and classKey
 saveRDS(object = spec_names, file = "./data/spec_names.RDS")
 
+
+# extract x y information from eea_cell_code
+df_xy <- df %>%
+  dplyr::select(eea_cell_code) %>%
+  distinct(eea_cell_code) %>%
+  mutate(x = as.integer(substr(eea_cell_code, start = 5, stop = 8)),
+         y = as.integer(substr(eea_cell_code, start = 10, stop = 13)))
+
+saveRDS(df_xy, file = "./data/df_xy.RDS")
+

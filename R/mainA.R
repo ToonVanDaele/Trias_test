@@ -46,23 +46,41 @@ source(file = "./R/9b_plot_function.R")
 df_in <- readRDS(file = "./data/cube_belgium.RDS")
 df_bl <- readRDS(file = "./data/cube_belgium_baseline.RDS")
 spec_names <- readRDS(file = "./data/spec_names.RDS")
+df_xy <- readRDS(file = "./data/df_xy.RDS")
 
 ## Preprocessing
 fyear <- 1950
 lyear <- 2017
 
-df_pp <- preproc(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
 df_s <- preproc_s(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
+df_pp <- preproc_pp(df_s)
+#df_pp <- preproc(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
 #df_spa <- preproc_pa(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
 
 # Save preprocessed data
-saveRDS(df_pp, file = "./data/df_pp.RDS")
 saveRDS(df_s, file = "./data/df_s.RDS")
+saveRDS(df_pp, file = "./data/df_pp.RDS")
+
 
 df_pp %>%
   filter(taxonKey == "3172100") %>%
   ggplot(aes(x = year, y = obs)) + geom_point() + geom_line()
 
+df_s %>%
+  filter(taxonKey == "3172100", year == 2005, obs > 0) %>%
+  left_join(df_xy, by = "eea_cell_code") %>%
+  ggplot(aes(x = x, y = y)) + geom_point()
+
+
+df_s %>%
+  filter(taxonKey == "3172100" & year == 2017) %>%
+  plot_map()
+
+df_s %>%
+  filter(taxonKey == "3172100" & year == 2015) %>%
+  mutate(bo = ifelse(obs > 0, 1, 0)) %>%
+  left_join(df_xy, by = "eea_cell_code") %>%
+  ggplot(aes(x = x, y = y, colour = bo)) + geom_point()
 
 
 
