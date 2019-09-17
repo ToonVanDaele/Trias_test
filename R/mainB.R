@@ -1,5 +1,10 @@
 ### Main B
 
+# Load data
+df_s <- readRDS(file = "./data/df_s.RDS")
+df_pp <- readRDS(file = "./data/df_pp.RDS")
+df_xy <- readRDS(file = "./data/df_xy.RDS")
+spec_names <- readRDS(file = "./data/spec_names.RDS")
 
 # Select species (for testing)
 df_sp <- selspec(df_pp) %>%

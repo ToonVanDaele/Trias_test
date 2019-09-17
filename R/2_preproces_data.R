@@ -100,13 +100,16 @@ preproc_s <- function(df_in, df_bl, spec_names, df_xy,
 preproc_pp <- function(df_s){
 
   df_1 <- df_s %>%
-    filter(obs > 0) %>%
     group_by(taxonKey, year) %>%
     summarise(obs = sum(obs),
-              cobs = sum(cobs),
-              ncells = n_distinct(eea_cell_code))
+              cobs = sum(cobs))
 
   df_2 <- df_s %>%
+    filter(obs > 0) %>%
+    group_by(taxonKey, year) %>%
+    summarise(ncells = n_distinct(eea_cell_code))
+
+  df_3 <- df_s %>%
     filter(cobs > 0) %>%
     group_by(taxonKey, year) %>%
     summarise(ncobs = n_distinct(eea_cell_code))
@@ -114,7 +117,10 @@ preproc_pp <- function(df_s){
   df_pp <- df_1 %>%
     left_join(df_2,
               by = c("taxonKey", "year")) %>%
-    replace_na(list(ncobs = 0))
+    left_join(df_3,
+               by = c("taxonKey", "year")) %>%
+    replace_na(list(ncells = 0, ncobs = 0)) %>%
+    ungroup()
 
   return(df_pp)
 }

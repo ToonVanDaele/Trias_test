@@ -1,5 +1,5 @@
 ---
-title: "R03_gam"
+title: "R03_INLA"
 author: "Toon Van Daele"
 date: "26 augustus 2019"
 output:
@@ -25,26 +25,22 @@ source(file = "../R/9_function.R")
 source(file = "../R/9b_plot_function.R")
 ```
 
-# GAM
+# INLA
 
 We use the (confidence intervals) of the first & second derivative of the smoother s(year) as an indication wether the species is increasing or not.
 
-GAM in mgcv package is very robust and flexible.
+INLA with random intercept.
 
-Both the 'df_pp' & 'df_s' data frames are used:
+We use the 'df_pp' data frame:
 
 - obs = number of observations
 - ncells = number of cells
 - cobs = number of observations of species class
 - ncobs = number of cells (cobs >= 1)
-- eea_cell_code = cell code
-
 
 ```{r load-preprocessed-data, include=FALSE}
-df_s <- readRDS(file = "../data/df_s.RDS")
 df_pp <- readRDS(file = "../data/df_pp.RDS")
 spec_names <- readRDS(file = "../data/spec_names.RDS")
-df_xy <- readRDS(file = "../data/df_xy.RDS")
 ```
 
 ```{r select-species}
@@ -157,15 +153,12 @@ ggplot(df, aes(x = cobs, y = obs)) + geom_point()
 
 # Op hokniveau -> hok als random intercept +  aantal waarneminge nvan de groep per hok en jaar
 
+
+
+
 gB <- gam(obs ~ s(year, m = 3, bs = "tp") +
             s(cobs, bs = "ts"), family = nb(),
                 data = df, method = "REML")
-
-
-# gB <- gam(obs ~ s(year, m = 3, k = 4, bs = "tp") +
-#             cobs, family = nb(),
-#                 data = df, method = "REML")
-
 ```
 
 
@@ -215,36 +208,8 @@ plot_ribbon_em(df_n = df_n, df = df, printplot = FALSE, saveplot = FALSE)
 ```
 
 
-## Model C: Adding location (grid cell) as random intercept 
 
-The number of observations eea_cell_code as random intercept.
-
-```{r}
-df <- df_s %>%
-  filter(taxonKey == spec_id) 
-```
-
-option 're' in the smoother
-
-```{r}
-
-# hok als random intercept +  aantal waarnemingen van de groep per hok en jaar
-
-df$eea_cell_code <- as.factor(df$eea_cell_code)
-
-gB <- gam(obs ~ s(year, m = 3, bs = "tp") + s(eea_cell_code, bs = "re"),
-          data = df)
-
-summary(gB)
-```
-
-
-```{r}
-appraise(gB)
-```
-
-
-## Model D: Adding temporal correlacton AR1
+## Model C: Adding temporal correlacton AR1
 
 GAMM doesn't accept the negative binomial distribution. We try 
 GAMM with quasipoisson.
