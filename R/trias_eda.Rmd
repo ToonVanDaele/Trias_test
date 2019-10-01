@@ -2,69 +2,82 @@
 title: "Trias_eda"
 author: "Toon Van Daele"
 date: "22 augustus 2019"
-output: html_document
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  html_document:
+    code_folding: hide
+    df_print: paged
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warnings = FALSE)
 library(tidyverse)
-source(file = "../R/2_preproces_data.R")
-source(file = "../R/9b_plot_function.R")
+library(kableExtra)
 ```
 
 # Exploratory data analysis of Trias data
 
-This documents presents some basic data exploration for the TRIAS data.
+This documents presents some elementary data exploration of the TRIAS dataset
 
-The data set is a dump from GBIF -> see github -> trias-project/occ-processing
+The dataset originates from GBIF. See http://www.github.com/trias-project/occ-processing
+for a detailed description on how the data where extracted from the GBIF database.
 
-```{r load data}
+The data exploration uses the output from the script 'trias-test/R/mainA.R'
+
+```{r loadrawdata}
 # The RDS files are generated with the script '1_getdata.R'
-df_in <- readRDS(file = "../data/cube_belgium.RDS")
-df_bl <- readRDS(file = "../data/cube_belgium_baseline.RDS")
+#df_in <- readRDS(file = "../data/cube_belgium.RDS")
+#df_bl <- readRDS(file = "../data/cube_belgium_baseline.RDS")
+#df_xy <- readRDS(file = "../data/df_xy.RDS")
 spec_names <- readRDS(file = "../data/spec_names.RDS")
 ```
 
 ## Raw data
 
-Number of observations by year (all species)
+Observations before 1950 are not relevant for the study and will be ignored.
+There is no specific follow up of invasive species before 1950.
 
-```{r observations-by-year, fig.cap="Number of observations by year"}
-df_in %>%
-  group_by(year) %>%
-  summarise(nobs = sum(n)) %>%
-  ggplot(aes(x = year, y = nobs)) + geom_point()
-```
-
-De observaties voor 1950 laten we weg. Voor 1950 is er geen systematische opvolging
-van (invasieve) soorten.
-
-De laatste twee jaar (2018, 2019) zijn er veel minder waarnemingen. Dit is het effect van de vertraging tussen waarneming en beschikbaarheid in GBIF.
-We bekijken de data voorlopig daarom slechts tot en met 2017.
+De last two years (2018 & 2019) show much less observations. This is due to the delay between
+he observation in the field and the availability of the validated data in the GBIF database.
+For the moment we only consider the data till 2017.
 
 ## Preprocessing
 
-Preprocessing generates 3 distinct data frames
+Preprocessing generates 2 data frames for the analysis:
+
+- df_s = number of observations (obs) by cellID, year and species. The class of the species (classKey) and the number of observations of the species class (cobs).
 
 - df_pp = Number of observations (obs) and number of distinct cells (ncells) by
 year and species. The class to which the species belongs (classKey). The number of observations of the class (cobs) en number of distinct cells with observations of the class (ncobs) 
 
-- df_s = number of observations (n) by utmID, year and species. The class of the species (classKey) and the number of observations of the class (cobs).
 
-```{r preprocessing}
-fyear <- 1950
-lyear <- 2017
-
-df_pp <- preproc(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
-df_s <- preproc_s(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
+```{r load_preprocessed_data}
+df_pp <- readRDS(file = "../data/df_pp.RDS")
+#df_s <- readRDS(file = "../data/df_s.RDS")
 ```
 
-The original data only contains gridcells and years with observations. Years without observation of a species are 'gaps' in the time series.
+The original dataset only contains the gridcells and years with at least one observation.
+Years without observation of a species are 'gaps' in the time series.
 
 The first year of the time series is the year with at least one observation.
 Zeros are added to all consecutive years without observations till the last year (i.e. 2017).
 
 ## General overview
+
+Description of the variables:
+
+- obs = number of observations
+- ncells = number of cells with at least 1 observaties (obs >= 1)
+
+- cobs = number of observations of the species class
+- ncobs = number of cells with observation of the species class
+
 
 ```{r}
 nb_species <- length(unique(df_pp$taxonKey))
@@ -72,33 +85,50 @@ nb_species <- length(unique(df_pp$taxonKey))
 
 The total number of species in the dataset: `r nb_species`
 
+
+Total number of observations by year (all species)
+
+```{r observations-by-year, fig.cap="Number of species", fig.width= 5, fig.height = 3, message=FALSE, warning=FALSE}
+df_pp %>%
+  group_by(year) %>%
+  summarise(nobs = sum(obs)) %>%
+  ggplot(aes(x = year, y = nobs)) + geom_point()
+```
+
+
 ```{r tlength}
 # Length of the time series 
 df_temp <- df_pp %>%
+  filter(obs > 0) %>%
   group_by(taxonKey) %>%
   summarise(minyear = min(year),
             maxyear = max(year)) %>%
-  mutate(tlength = maxyear - minyear) %>%
-  group_by(tlength) %>%
-  summarise(nb = n()) %>%
-  arrange(desc(tlength))
-
-tlength0 <- df_temp %>% filter(tlength == 0) %>% .$nb
+  group_by(minyear) %>%
+  summarise(nbmin = n()) %>%
+  arrange(minyear) %>%
+  mutate(cumspec = cumsum(nbmin))
 ```
 
-Number of species by lengtht of the time series (i.e. 2017 - year of first observation)
+Cumulative number of species by year (first year observed)
 
-There are quite a few species with only observations for the last year (`r tlength0`) (i.e. in het jaar 2017).
-
-```{r plottlength}
+```{r plotcumsum, fig.width= 5, fig.height = 3}
 df_temp %>%
-  filter(tlength > 0) %>%
-  ggplot(aes(x = tlength, y = nb)) + geom_point()
+  ggplot(aes(x = minyear, y = cumspec)) + geom_line() + geom_point()
 ```
 
-Number of species with at least one observation
+Number of distinct species observed since the last 10 years
 
-```{r specyear}
+```{r nbspec2017}
+df_pp %>%
+  filter(year > 2007, obs > 0) %>%
+  group_by(year) %>%
+  summarise(nbspec = n_distinct(taxonKey)) %>%
+  kable()
+```
+
+
+
+```{r specyear, fig.width= 5, fig.height = 3}
 df_pp %>%
   filter(obs > 0) %>%
   group_by(year) %>%
@@ -107,53 +137,37 @@ df_pp %>%
   ggplot(aes(x = year, y = nspec)) + geom_point()
 ```
 
-Definition of the variables:
-
-- obs = number of observations
-- ncells = number of cells with at least 1 observaties (obs >= 1)
-
-- cobs = number of observations of the species class
-- ncobs = number of cells with observation of the species class
 
 The number of observations and number of cells with observation in the year 2017
 
-```{r number-of-observations-in-2017}
-df_pp %>%
-  ungroup() %>%
-  filter(year == 2017) %>%
-  arrange(obs) %>%
-  mutate(id = row_number()) %>%
-  ggplot(aes(x = id, y = obs)) + geom_point() + scale_y_log10()
+```{r number-of-observations-in-2017, warning=FALSE}
+# df_pp %>%
+#   ungroup() %>%
+#   filter(year == 2017) %>%
+#   arrange(obs) %>%
+#   mutate(id = row_number()) %>%
+#   ggplot(aes(x = id, y = obs)) + geom_point() + scale_y_log10()
 ```
 
 Number of cells with observations (ncells) in 2017.
 
-```{r number-of-cells-with-observations-in-2017}
-df_pp %>%
-  ungroup() %>%
-  filter(year == 2017) %>%
-  arrange(ncells) %>%
-  mutate(id = row_number()) %>%
-  ggplot(aes(x = id, y = ncells)) + geom_point() + scale_y_log10()
+```{r number-of-cells-with-observations-in-2017, warning=FALSE}
+# df_pp %>%
+#   ungroup() %>%
+#   filter(year == 2017) %>%
+#   arrange(ncells) %>%
+#   mutate(id = row_number()) %>%
+#   ggplot(aes(x = id, y = ncells)) + geom_point() + scale_y_log10()
 ```
 
 ## Examples of some individual time series
 
-The behaviour of the time series is very diverse.
+The time series is very diverse.
 
-Most time series are rather short with a limited number of observations per year. Many time series contain a lot of zeros (no observation of the species). Some examples:
-
-```{r number-of-cells}
-specs <- c("2115769", "3172100", "3686235", "4048240")
-df_pp %>%
-  filter(taxonKey %in% specs) %>%
-  left_join(spec_names, by = "taxonKey") %>%
-  ggplot(aes(x = year, y = ncells)) + geom_line(colour = "grey") +
-    geom_point() + 
-  facet_wrap(~spn, nrow = 2, scales = "free_y")
-```
+Most time series are rather short with a limited number of observations per year. Often there are a lot of zeros (no observation of the species). Some examples:
 
 ```{r number-of-observations}
+specs <- c("2115769", "3172100", "3686235", "4048240")
 df_pp %>%
   filter(taxonKey %in% c("2115769", "3172100", "3686235", "4048240")) %>%
   left_join(spec_names, by = "taxonKey") %>%
@@ -162,8 +176,6 @@ df_pp %>%
   facet_wrap(~spn, nrow = 2, scales = "free_y")
 ```
 
-The number of cells (ncells) is lower or equal to the number of observations (obs >= ncells).
-
-
+The number of cells (ncells) is always lower or equal to the number of observations (obs >= ncells).
 
 

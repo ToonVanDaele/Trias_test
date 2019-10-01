@@ -111,12 +111,12 @@ plot_incr_em <- function(df, ptitle = NULL,
   lyear <- max(df$year)
   if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
 
-  g <- ggplot(df, aes(x = year, y = ncells, colour = em)) +
+  g <- ggplot(df, aes(x = year, y = obs, colour = emtot)) +
     geom_line(colour = "grey") +
     geom_point() +
-    scale_colour_manual(values = c("3" = "red", "2" = "orangered", "1" = "orange",
+    scale_colour_manual(values = c("4" = "dark red", "3" = "red", "2" = "orangered", "1" = "orange",
                                    "0" = "grey70", "-1" = "yellow",
-                                   "-2" = "green", "-3" = "dark green"),
+                                   "-2" = "green", "-3" = "green", "-4" = "green"),
                                    na.value = "grey30") +
     ggtitle(ptitle)
 
@@ -192,5 +192,5 @@ plot_map <- function(df){
   mutate(ob = ifelse(obs > 0, 1, 0)) %>%
   left_join(df_xy, by = "eea_cell_code") %>%
   ggplot(aes(x = x, y = y, colour = ob)) + geom_point() +
-    xlim(3780, 4080) + ylim(2910, 3180)
+    xlim(3780000, 4080000) + ylim(2910000, 3180000) + coord_fixed()
 }

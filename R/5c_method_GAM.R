@@ -59,18 +59,16 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
       #draw(deriv1) #draw(deriv2)
 
       # Emerging status based on first and second derivative
-      em <- em_level(deriv1, deriv2)
-      df_n <- bind_cols(df_n, em)
+      em_level_gam <- em_level(deriv1, deriv2)
+      df_n <- bind_cols(df_n, em_level_gam)
+
 
       # Create plot with conf. interval + colour for emerging status
       ptitle <- paste0("GAM/", spec, "_", spn, "_", lyear)
       g <- plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle,
                           printplot = printplot, saveplot = saveplot)
 
-      # Save emerging status of the last year
-      out <- em %>%
-      filter(year == max(year)) %>%
-      .$em
+      out <- em_gam2em(em_level_gam) # define final emerging status of the last year
 
     })
 
@@ -79,6 +77,7 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
       g1 <- df_n <- g <- NULL
       deriv1 <- deriv2 <- NULL
     }
+
   }else{
     df$fit <- df$ucl <- df$lcl <- out <- NA
     g1 <- df_n <- g <- NULL
@@ -88,8 +87,9 @@ spGAM <- function(df, printplot = FALSE, saveplot = FALSE) {
 
   # p-waarde van de smoother te groot -> output NA toevoegen
 
-  df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = "GAM", em = out)
-  return(list(df = df, em = df_em, model = g1, df_n = df_n,
+  df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = "GAM",
+                  em = out, )
+  return(list(em = df_em, model = g1, df_n = df_n, em_level_gam = em_level_gam,
               deriv1 = deriv1, deriv2 = deriv2, plot = g, result = result))
 }
 

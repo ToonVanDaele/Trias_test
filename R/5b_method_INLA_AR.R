@@ -7,8 +7,11 @@ spINLA <- function(df, printplot = FALSE, saveplot = FALSE){
 
   spec <- df[[1,1]]
   spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn) %>% as.character()
+
   fyear <- min(df$year)
   lyear <- max(df$year)
+
+  cat(spec, " - ", spn, " - ", lyear, "\n")
 
   #i1 <- inla(ncells ~ year,
   #           family = "nbinomial",
@@ -32,6 +35,14 @@ spINLA <- function(df, printplot = FALSE, saveplot = FALSE){
   #rw1 <- simulate_rw(sigma = 0.1, length = 40)
   #plot(select_divergence(rw1),link = "log")
 
+  if (nrow(subset(df, obs > 0)) < 5) {
+    message <- "less than 5 observations"
+    df$fit <- df$ucl <- df$lcl <- out <- NA
+    i2 <- df_n <- g <- NULL
+    df_em <- tibble(taxonKey = spec, eyear = lyear, method_em = "INLA", em = out)
+    return(list(em = df_em, model = i2, df_n = df_n, plot = g, result = message))
+  }
+
   result <- try({
     i2 <- inla(ncells ~ f(year,
                           model = "rw2",
@@ -39,7 +50,8 @@ spINLA <- function(df, printplot = FALSE, saveplot = FALSE){
                             theta = list(prior = "pc.prec", param = c(0.05, 0.01)))),
                control.compute = list(dic = TRUE),
                family = "nbinomial",
-               data = df)
+               data = df,
+               silent = 1)
 
     #summary(i2)
 
@@ -52,7 +64,21 @@ spINLA <- function(df, printplot = FALSE, saveplot = FALSE){
     ptitle <- paste0("/INLA/", spec, "_", spn, "_", lyear)
     g <- plot_ribbon_em(df_n = df_n, df = df, ptitle = ptitle,
                         printplot = printplot, saveplot = saveplot)
-    out <- NA   # NO emergence status
+
+    # Calculate first derivative of the rw2 random walk with
+    # h = 1 year (finite difference) -> slope = difference
+    # Backward differences are choosen because we're interested in the last value)
+    # No standard error for the moment.
+    df_n <- df_n %>%
+      mutate(deriv1 = fit - lag(fit, 1))
+
+    #ggplot(df_n, aes(x = year, y = deriv1)) + geom_line() + geom_point()
+
+    out <- as.integer(ifelse(df_n[nrow(df_n), "deriv1"] > 0, 3, 0))
+
+    # Why are these to vectors not the same? Should use the marginals?
+    #exp(i2$summary.fixed$mean + i2$summary.random$year$mean)
+    #i2$summary.fitted.values$mean
 
   })
 
@@ -62,6 +88,6 @@ spINLA <- function(df, printplot = FALSE, saveplot = FALSE){
   }
 
   df_em <- tibble(taxonKey = spec, eyear = lyear, method_em = "INLA", em = out)
-  return(list(df = df, em = df_em, model = i2, df_n = df_n, plot = g, result = result))
+  return(list(em = df_em, model = i2, df_n = df_n, plot = g, result = result))
 
 }

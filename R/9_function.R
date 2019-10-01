@@ -1,5 +1,31 @@
 # Functions
 
+# Harmonise levels of emerging status among methods
+
+get_em_levels <- function(){
+
+  df_em_levels <- data.frame(em = c(0, 1, 2, 3, 4),
+                   status = c("not emerging", "unclear", "potentially emerging",
+                              "emerging", "re-appearing"))
+
+}
+
+
+# Map em_gam out to em
+em_gam2em <- function(em_gam){
+
+  em <- em_gam %>%
+    filter(year == max(year)) %>%
+    mutate(em_out = case_when(
+      em < 0 ~ 0,
+      em == 0 ~ 1,
+      em < 3 ~ 2,
+      em >= 3 ~ 3)) %>%
+    .$em_out
+
+    return(em)
+}
+
 # Calculate first and second derivative from smoother 'year'
 #
 # g gam model

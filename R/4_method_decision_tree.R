@@ -19,57 +19,61 @@ spDT <- function(df){
   nb <- nrow(df)        # length of time series
   ptitle <- paste0("/dt/", spec, "_DT_",lyear)
 
-  dt <- rep(FALSE, 6)  # Vector to store results of tests (default = FALSE)
+  dt <- rep(FALSE, 8)  # Vector to store results of tests (default = FALSE)
 
-  # Time series with only one value?   -> appearing species  (always > 0)
+  # DT_1: Time series with only one value?   -> appearing species  (always > 0)
   if (nb == 1) dt[1] <- TRUE
 
-  # 50% of time series > 0?
+  # DT_2: 50% of time series > 0?
   if (sum(df$ncells > 0) / nb >= 0.5) dt[2] <- TRUE
 
-  # Second value = 0  -> possibly emerging ("2")
+  # DT_3: Second value = 0  -> possibly emerging ("2")
   #if (df[[2,"ncells"]] > 0) dt[3] <- TRUE
 
-  # 0 since 5 years -> not emerging
+  # DT_4: 0 since 5 years -> not emerging
   if (sum(df$ncells[max(nb - 4, 0):nb]) == 0) dt[4] <- TRUE
 
-  # > 0 and 5 consecutive years 0 before  -> (re)appearing
-  if (nb > 1 & df$ncells[nb] > 0 & sum(df$ncells[max(nb - 5, 0):(nb - 1)]) == 0) dt[5] <- TRUE
+  # DT_5: > 0 and 5 consecutive years 0 before  -> (re)appearing
+  if (nb > 1 && df$ncells[nb] > 0 & sum(df$ncells[max(nb - 5, 0):(nb - 1)]) == 0) dt[5] <- TRUE
 
-  # Maximum of ncells == 1
+  # DT_6: Maximum of ncells == 1
   if (max(df$ncells) <= 1) dt[6] <- TRUE
 
-  # Increase? Last value > before last value
-  if (nb > 1 & df$ncells[nb] > df$ncells[nb - 1]) dt[7] <- TRUE
+  # DT_7: Increase? Last value > before last value
+  if (nb > 1 && df$ncells[nb] > df$ncells[nb - 1]) dt[7] <- TRUE
+
+  # DT_8: Maximum ever observed?
+  if (df$ncells[nb] > max(df$ncells)) dt[8] <- TRUE
 
   #em status codes:
   # 0 = not emerging
-  # 1 = appearing
-  # 2 = re-appearing
-  # 3 = possibly emerging
-  # 4 = emerging
+  # 1 = unclear
+  # 2 = potentially emerging
+  # 3 = emerging
+  # 4 = appearing / re-appearing
 
   em <- case_when(
-    dt[4] == TRUE ~ 0,                 # zeros since > 5 years => not emerging
-    dt[1] == TRUE ~ 1,                 # One value > 1 => appearing
-    dt[5] == TRUE ~ 2,                 # > 0 after 5 consecutive 0 => re-appearing
-    dt[6] == TRUE & dt[2] == TRUE ~ 3,  # possibly emerging
-    dt[7] == TRUE ~ 4,                 # Last year increase => emerging
+    dt[4] == TRUE ~ 0,                  # zeros since > 5 years => not emerging
+    dt[1] == TRUE ~ 4,                  # One value > 1 => appearing / re-appearing
+    dt[5] == TRUE ~ 4,                  # > 0 after 5 consecutive 0 => re-appearing
+    dt[6] == TRUE & dt[2] == TRUE ~ 2,  # potentially emerging
+    dt[7] == TRUE & dt[8] == FALSE ~ 2, # Last year increase but not maximum => possibly emerging
+    dt[8] == TRUE ~ 3                   # maximum ever observerd => emerging
   )
 
-  if (is.na(em)) em <- "0"
+  if (is.na(em)) em <- 0
 
   ptitle <- paste0(spec, "_", lyear, "_", em)
   g <- plot_ts(df = df, ptitle = ptitle)
 
   df_em <- tibble(taxonKey = spec, eyear = lyear,  method_em = "DT", em = em)
-  outlist <- list(df = df, dt = dt, plot = g, em = df_em)
+  outlist <- list(dt = dt, plot = g, em = df_em)
   return(outlist)
 }
 
 
-## Rule set can be simplyfied by cutting any series with > 4 years 0 and only consider
-# the series herafter.
+## Rule set can be simplyfied by cutting any series with > 4 years with 0 observations
+#and only consider the observations after.
 
 
 

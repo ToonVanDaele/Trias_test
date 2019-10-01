@@ -49,18 +49,18 @@ spec_names <- readRDS(file = "./data/spec_names.RDS")
 df_xy <- readRDS(file = "./data/df_xy.RDS")
 
 ## Preprocessing
-fyear <- 1950
-lyear <- 2017
+firstyear <- 1980
+lastyear <- 2017
 
-df_s <- preproc_s(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
+df_s <- preproc_s(df_in, df_bl, df_xy, spec_names,
+                  firstyear = firstyear, lastyear = lastyear)
 df_pp <- preproc_pp(df_s)
-#df_pp <- preproc(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
-#df_spa <- preproc_pa(df_in, df_bl, spec_names, firstyear = fyear, lastyear = lyear)
 
 # Save preprocessed data
 saveRDS(df_s, file = "./data/df_s.RDS")
 saveRDS(df_pp, file = "./data/df_pp.RDS")
 
+## Some checks (to be deleted)
 
 df_pp %>%
   filter(taxonKey == "3172100") %>%
@@ -69,21 +69,21 @@ df_pp %>%
 df_s %>%
   filter(taxonKey == "3172100", year == 2005, obs > 0) %>%
   left_join(df_xy, by = "eea_cell_code") %>%
-  ggplot(aes(x = x, y = y)) + geom_point()
+  ggplot(aes(x = x, y = y)) + geom_point() + coord_fixed()
 
 
 df_s %>%
   filter(taxonKey == "3172100" & year == 2017) %>%
   plot_map()
 
-df_s %>%
-  filter(taxonKey == "3172100" & year == 2015) %>%
-  mutate(bo = ifelse(obs > 0, 1, 0)) %>%
-  left_join(df_xy, by = "eea_cell_code") %>%
-  ggplot(aes(x = x, y = y, colour = bo)) + geom_point()
+# Check of there is at least one observation > 0 for each cell + species
 
-
-
+temp <- df_s %>%
+  group_by(taxonKey, eea_cell_code) %>%
+  summarise(maxobs = max(obs)) %>%
+  group_by(taxonKey) %>%
+  summarise(min_cell = min(maxobs))
+summary(temp)
 
 #listlenght = aantal soorten per jaar en per cel  smoother
 # enkel cellen en jaren waar minstens 10 soorten gezien zijn

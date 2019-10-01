@@ -19,6 +19,21 @@ df_bl <- select(df_bl, -min_coord_uncertainty)
 
 saveRDS(object = df_bl, file = "./data/cube_belgium_baseline.RDS")
 
+
+# Get data 'eea_cell_code_protected_areas'
+df_xy <- read.table(file = "./data/intersect_EEA_ref_grid_protected_areas.tsv",
+                    sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+
+df_xy <- df_xy %>%
+  dplyr::select(eea_cell_code = CELLCODE, x = EOFORIGIN, y = NOFORIGIN,
+                natura2000, spa, habitat) %>%
+  semi_join(df %>%
+               dplyr::select(eea_cell_code),
+             by = "eea_cell_code")
+
+saveRDS(df_xy, file = "./data/df_xy.RDS")
+
+
 # species - kingdomkey - canonicalName
 speclist <- unique(df$taxonKey)
 library(rgbif)
@@ -30,14 +45,3 @@ spec_names <- data.frame(taxonKey = speclist,
 
 # write species list with name (canonical), taxon-, kingdom- and classKey
 saveRDS(object = spec_names, file = "./data/spec_names.RDS")
-
-
-# extract x y information from eea_cell_code
-df_xy <- df %>%
-  dplyr::select(eea_cell_code) %>%
-  distinct(eea_cell_code) %>%
-  mutate(x = as.integer(substr(eea_cell_code, start = 5, stop = 8)),
-         y = as.integer(substr(eea_cell_code, start = 10, stop = 13)))
-
-saveRDS(df_xy, file = "./data/df_xy.RDS")
-

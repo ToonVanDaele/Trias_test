@@ -31,3 +31,30 @@ incrts <- function(df, backward = 4){
                 .f = filter_year,
                 df)
 }
+
+
+## New set of functions
+
+filter_year2 <- function(eyear, df){
+  df_out <- df %>%
+    filter(year <= eyear)
+  if (nrow(df_out) > 0) df_out$eyear <- eyear
+  return(df_out)
+}
+
+
+# Create incresing time series
+dfincr <- function(df, eval_year, meth) {
+
+  t <- map_dfr(.x = eval_year,
+               .f = filter_year2,
+               df)
+
+  out <- t %>%
+    group_by(eyear) %>%
+    group_split() %>%
+    map(.f = get(meth)) %>%
+    set_names(unique(t$eyear))
+
+  return(out)
+}
