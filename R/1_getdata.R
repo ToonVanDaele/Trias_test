@@ -1,5 +1,7 @@
 ## TRIAS - Load data from Github and store as RDS file
 
+library(tidyverse)
+
 # Get the data 'cube_belgium'
 df <- read.table(file = "./data/cube_belgium.tsv",
                  header = TRUE, stringsAsFactors = FALSE)
@@ -31,10 +33,15 @@ df_xy <- df_xy %>%
                dplyr::select(eea_cell_code),
              by = "eea_cell_code")
 
+df_xy <- df_xy %>%
+  mutate(x = x / 1000,
+         y = y / 1000)
+
 saveRDS(df_xy, file = "./data/df_xy.RDS")
 
 
 # species - kingdomkey - canonicalName
+# # Caution - this takes a while - probably not necessary to run again
 speclist <- unique(df$taxonKey)
 library(rgbif)
 spec_names <- data.frame(taxonKey = speclist,

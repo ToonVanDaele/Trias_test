@@ -7,7 +7,7 @@
 #' First the time series are characterised with some tests (TRUE/FALE)
 #' Second the results of these tests are combined to decided the emergency status
 
-#' Only the occupancy (ncells) information is used.
+#' Only the occupancy (ncell) information is used.
 
 #' @param df data frame with time series
 #' @return list with dataframe, emergency status and tests
@@ -15,9 +15,11 @@
 spDT <- function(df){
 
   spec <- df[[1,1]]     # species name
+  spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn) %>% as.character()
   lyear <- max(df$year) # last year
   nb <- nrow(df)        # length of time series
-  ptitle <- paste0("/dt/", spec, "_DT_",lyear)
+  ptitle <- paste0("/dt/", spec, "_", spn, "_DT_",lyear)
+  cat(ptitle, "\n")
 
   dt <- rep(FALSE, 8)  # Vector to store results of tests (default = FALSE)
 
@@ -25,25 +27,25 @@ spDT <- function(df){
   if (nb == 1) dt[1] <- TRUE
 
   # DT_2: 50% of time series > 0?
-  if (sum(df$ncells > 0) / nb >= 0.5) dt[2] <- TRUE
+  if (sum(df$ncell > 0) / nb >= 0.5) dt[2] <- TRUE
 
   # DT_3: Second value = 0  -> possibly emerging ("2")
-  #if (df[[2,"ncells"]] > 0) dt[3] <- TRUE
+  #if (df[[2,"ncell"]] > 0) dt[3] <- TRUE
 
   # DT_4: 0 since 5 years -> not emerging
-  if (sum(df$ncells[max(nb - 4, 0):nb]) == 0) dt[4] <- TRUE
+  if (sum(df$ncell[max(nb - 4, 0):nb]) == 0) dt[4] <- TRUE
 
   # DT_5: > 0 and 5 consecutive years 0 before  -> (re)appearing
-  if (nb > 1 && df$ncells[nb] > 0 & sum(df$ncells[max(nb - 5, 0):(nb - 1)]) == 0) dt[5] <- TRUE
+  if (nb > 1 && df$ncell[nb] > 0 & sum(df$ncell[max(nb - 5, 0):(nb - 1)]) == 0) dt[5] <- TRUE
 
-  # DT_6: Maximum of ncells == 1
-  if (max(df$ncells) <= 1) dt[6] <- TRUE
+  # DT_6: Maximum of ncell == 1
+  if (max(df$ncell) <= 1) dt[6] <- TRUE
 
   # DT_7: Increase? Last value > before last value
-  if (nb > 1 && df$ncells[nb] > df$ncells[nb - 1]) dt[7] <- TRUE
+  if (nb > 1 && df$ncell[nb] > df$ncell[nb - 1]) dt[7] <- TRUE
 
   # DT_8: Maximum ever observed?
-  if (df$ncells[nb] > max(df$ncells)) dt[8] <- TRUE
+  if (df$ncell[nb] > max(df$ncell)) dt[8] <- TRUE
 
   #em status codes:
   # 0 = not emerging

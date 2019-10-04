@@ -16,7 +16,9 @@ source(file = "./R/3b_incr_times_series.R")
 source(file = "./R/4_method_decision_tree.R")
 source(file = "./R/5a_method_piecewise_regression.R")
 source(file = "./R/5b_method_INLA_AR.R")
-source(file = "./R/5c_method_GAM.R")
+source(file = "./R/5c_method_GAM_short.R")
+source(file = "./R/5d_method_GAM_pa.R")
+source(file = "./R/5e_method_GAM_count.R")
 source(file = "./R/9_function.R")
 source(file = "./R/9b_plot_function.R")
 
@@ -36,15 +38,18 @@ saveRDS(df_s, file = "./data/df_s.RDS")
 saveRDS(df_pp, file = "./data/df_pp.RDS")
 
 ## Read preprocessed data
-#df_s <- readRDS(file = "./data/df_s.RDS")
+df_s <- readRDS(file = "./data/df_s.RDS")
 df_pp <- readRDS(file = "./data/df_pp.RDS")
 
 ## Selection of species for testing
-df_sp <- selspec(df_pp = df_pp)
+df_ss <- selspec(df = df_s, specs = spec_names$taxonKey)
+df_sp <- selspec(df = df_pp, specs = spec_names$taxonKey)
 
 # Set group & retrieve group names (i.e. vector with taxonKeys)
 df_sp <- df_sp %>% group_by(taxonKey)
-taxl <- df_sp %>% group_keys() %>% pull(taxonKey)
+taxl_sp <- df_sp %>% group_keys() %>% pull(taxonKey)
+df_ss <- df_ss %>% group_by(taxonKey)
+taxl_ss <- df_ss %>% group_keys() %>% pull(taxonKey)
 
 ## Apply each method on all species
 
@@ -52,39 +57,105 @@ taxl <- df_sp %>% group_keys() %>% pull(taxonKey)
 result_dt <- df_sp %>%
   group_split() %>%
   map(.f = dfincr, eval_year, "spDT") %>%
-  set_names(taxl)
+  set_names(taxl_sp)
 saveRDS(result_dt, file = "./output/result_dt.RDS")
 
-# GAM
-result_gam <- df_sp %>%
+# GAM_lcount
+result_gam_lcount <- df_sp %>%
   group_split() %>%
-  map(.f = dfincr, eval_year, "spGAM") %>%
-  set_names(taxl)
-saveRDS(result_gam, file = "./output/result_gam.RDS")
+  map(.f = dfincr, eval_year, "spGAM_lcount") %>%
+  set_names(taxl_sp)
+saveRDS(result_gam_lcount, file = "./output/result_gam_lcount.RDS")
+
+# GAM_lpa
+result_gam_lpa <- df_sp %>%
+  group_split() %>%
+  map(.f = dfincr, eval_year, "spGAM_lpa") %>%
+  set_names(taxl_sp)
+saveRDS(result_gam_lpa, file = "./output/result_gam_lpa.RDS")
+
+# GAM_count
+result_gam_count <- df_ss %>%
+  group_split() %>%
+  map(.f = dfincr, eval_year, "spGAM_count") %>%
+  set_names(taxl_ss)
+saveRDS(result_gam_count, file = "./output/result_gam_count.RDS")
+
+# GAM_count_ns
+result_gam_count_ns <- df_ss %>%
+  group_split() %>%
+  map(.f = dfincr, eval_year, "spGAM_count_ns") %>%
+  set_names(taxl_ss)
+saveRDS(result_gam_count_ns, file = "./output/result_gam_count_ns.RDS")
+
+# GAM_pa
+result_gam_pa <- df_ss %>%
+  group_split() %>%
+  map(.f = dfincr, eval_year, "spGAM_pa") %>%
+  set_names(taxl_ss)
+saveRDS(result_gam_pa, file = "./output/result_gam_pa.RDS")
+
+# GAM_pa_ns
+result_gam_pa_ns <- df_ss %>%
+  group_split() %>%
+  map(.f = dfincr, eval_year, "spGAM_pa_ns") %>%
+  set_names(taxl_ss)
+saveRDS(result_gam_pa_ns, file = "./output/result_gam_pa_ns.RDS")
+
+
 
 # INLA
 result_inla <- df_sp %>%
   group_split() %>%
   map(.f = dfincr, eval_year, "spINLA") %>%
-  set_names(taxl)
+  set_names(taxl_sp)
 saveRDS(result_inla, file = "./output/result_inla.RDS")
 
 ## Extract 'emerging' information from each method and join
 result_dt <- readRDS(file = "./output/result_dt.RDS")
-result_gam <- readRDS(file = "./output/result_gam.RDS")
+result_gam_lcount <- readRDS(file = "./output/result_gam_lcount.RDS")
+result_gam_lpa <- readRDS(file = "./output/result_gam_lpa.RDS")
+result_gam_count <- readRDS(file = "./output/result_gam_count.RDS")
+result_gam_pa <- readRDS(file = "./output/result_gam_pa.RDS")
+result_gam_count_ns <- readRDS(file = "./output/result_gam_count_ns.RDS")
+result_gam_pa_ns <- readRDS(file = "./output/result_gam_pa_ns.RDS")
+
 result_inla <- readRDS(file = "./output/result_inla.RDS")
 
 emDT <- result_dt %>%
   map_dfr(~ .x %>% map_dfr("em"))
 
-emGAM <- result_gam %>%
+emGAM_lcount <- result_gam_lcount %>%
+  map_dfr(~ .x %>% map_dfr("em"))
+
+emGAM_count <- result_gam_count %>%
+  map_dfr(~ .x %>% map_dfr("em"))
+
+emGAM_count_ns <- result_gam_count_ns %>%
+  map_dfr(~ .x %>% map_dfr("em"))
+
+emGAM_lpa <- result_gam_lpa %>%
+  map_dfr(~ .x %>% map_dfr("em"))
+
+emGAM_pa <- result_gam_pa %>%
+  map_dfr(~ .x %>% map_dfr("em"))
+
+emGAM_pa_ns <- result_gam_pa_ns %>%
   map_dfr(~ .x %>% map_dfr("em"))
 
 emINLA <- result_inla %>%
   map_dfr(~ .x %>% map_dfr("em"))
 
-em <- rbind(emDT, emGAM, emINLA) %>%
+em <- rbind(emDT, emGAM_lcount, emGAM_count_ns, emGAM_count, emGAM_lpa, emGAM_pa_ns, emGAM_pa) %>%
   spread(key = method_em, value = em)
+
+em <- em %>%
+  left_join(spec_names %>%
+              select(taxonKey, spn),
+            by = "taxonKey") %>%
+  select('taxonKey', 'spn', 'eyear', 'DT', 'emGAM_lcount', 'emGAM_count_ns', 'emGAM_count',
+         'emGAM_lpa', 'emGAM_pa_ns', 'emGAM_pa')
+
 
 ## Decide the emerging status based on the multiple methods
 

@@ -21,7 +21,7 @@ preproc_s <- function(df_in, df_bl, df_xy, spec_names,
     left_join(df_xy,
               by = "eea_cell_code") %>%
     filter(year > firstyear & year <= lastyear) %>%
-    filter(x >= 3788000 & x <= 4065000 & y >= 2930000 & y <= 3201000) %>%
+    filter(x >= 3788 & x <= 4065 & y >= 2930 & y <= 3201) %>%
     dplyr::select(taxonKey, year, eea_cell_code, obs = n)
 
   # Sum of invasive species observations grouped by cell_code + year + class
@@ -102,6 +102,7 @@ preproc_s <- function(df_in, df_bl, df_xy, spec_names,
 
   df_s$pa_obs <- as.integer(df_s$pa_obs)
   df_s$pa_cobs <- as.integer(df_s$pa_cobs)
+  return(df_s)
 
 }
 
@@ -116,7 +117,7 @@ preproc_pp <- function(df_s){
     summarise(obs = sum(obs),
               cobs = sum(cobs),
               ncell = sum(pa_obs),
-              ncobs = sum(pa_cobs))
+              ncobs = sum(pa_cobs)) %>%
     ungroup()
 
   return(df_pp)

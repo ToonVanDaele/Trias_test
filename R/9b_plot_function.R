@@ -6,7 +6,7 @@
 # input df
 # year, ncells
 
-plot_ts <- function(df, y_axis = "ncells", ptitle = NULL,
+plot_ts <- function(df, y_axis = "ncell", ptitle = NULL,
                     printplot = FALSE, saveplot = FALSE){
 
   spec <- df[[1,1]]
@@ -65,7 +65,7 @@ plot_ribbon <- function(df_n, df, ptitle, printplot = FALSE, saveplot = FALSE){
 
 ### Plot time series with confidence limits + emerging status
 
-plot_ribbon_em <- function(df_n, df, ptitle = NULL,
+plot_ribbon_em <- function(df_n, df, y_axis = "obs", ptitle = NULL,
                            printplot = FALSE, saveplot = FALSE){
 
   lyear <- max(df$year)
@@ -80,7 +80,7 @@ plot_ribbon_em <- function(df_n, df, ptitle = NULL,
     geom_ribbon(aes(ymax = ucl, ymin = lcl),
                 fill = grey(0.5),
                 alpha = 0.4) +
-    geom_point(data = df, aes(x = year, y = ncells)) +
+    geom_point(data = df, aes(x = year, y = get(y_axis))) +
     scale_colour_manual(values = c("4" = "dark red", "3" = "red", "2" = "orangered", "1" = "orange",
                                    "0" = "grey50", "-1" = "light yellow",
                                    "-2" = "yellow", "-3" = "green", "-4" = "dark green")) +
