@@ -29,7 +29,7 @@ spGAM_pa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE)
   #                           dplyr::select(eea_cell_code, x, y, natura2000),
   #                         by = "eea_cell_code")
 
-  df$eea_cell_code <- as.factor(df$eea_cell_code)
+  #df$eea_cell_code <- as.factor(df$eea_cell_code)
 
   maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade, min 4
 

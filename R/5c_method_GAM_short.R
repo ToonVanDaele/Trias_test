@@ -27,7 +27,7 @@ spGAM_lcount <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FA
 
     result <- try({
 
-      maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade
+      maxk <- max(round((lyear - fyear) / 10, 0), 5)  # 1 knot per decade
       g1 <- gam(obs ~ s(year, k = maxk, m = 3, bs = "tp"),
                   family = nb(),
                 data = df, method = "REML")
@@ -107,7 +107,7 @@ spGAM_lpa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE
 
     result <- try({
 
-      maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade
+      maxk <- max(round((lyear - fyear) / 10, 0), 5)  # 1 knot per decade
       g1 <- gam(ncell ~ s(year, k = maxk, m = 3, bs = "tp"),
                 family = nb(),
                 data = df, method = "REML")

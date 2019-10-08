@@ -4,9 +4,9 @@
 
 get_em_levels <- function(){
 
-  df_em_levels <- data.frame(em = c(0, 1, 2, 3, 4),
+  df_em_levels <- data.frame(em = c(0, 1, 2, 3),
                    status = c("not emerging", "unclear", "potentially emerging",
-                              "emerging", "re-appearing"))
+                              "emerging"))
 
 }
 

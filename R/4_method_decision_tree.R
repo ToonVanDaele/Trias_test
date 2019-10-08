@@ -29,8 +29,8 @@ spDT <- function(df){
   # DT_2: 50% of time series > 0?
   if (sum(df$ncell > 0) / nb >= 0.5) dt[2] <- TRUE
 
-  # DT_3: Second value = 0  -> possibly emerging ("2")
-  #if (df[[2,"ncell"]] > 0) dt[3] <- TRUE
+  # DT_3: last value above median value -> possibly emerging ("2")
+  if (df$ncell[nb] > median(df$ncell)) dt[3] <- TRUE
 
   # DT_4: 0 since 5 years -> not emerging
   if (sum(df$ncell[max(nb - 4, 0):nb]) == 0) dt[4] <- TRUE
@@ -56,11 +56,12 @@ spDT <- function(df){
 
   em <- case_when(
     dt[4] == TRUE ~ 0,                  # zeros since > 5 years => not emerging
-    dt[1] == TRUE ~ 4,                  # One value > 1 => appearing / re-appearing
-    dt[5] == TRUE ~ 4,                  # > 0 after 5 consecutive 0 => re-appearing
-    dt[6] == TRUE & dt[2] == TRUE ~ 2,  # potentially emerging
-    dt[7] == TRUE & dt[8] == FALSE ~ 2, # Last year increase but not maximum => possibly emerging
-    dt[8] == TRUE ~ 3                   # maximum ever observerd => emerging
+    dt[1] == TRUE ~ 1,                  # One value > 1 => appearing / re-appearing
+    dt[5] == TRUE ~ 1,                  # > 0 after 5 consecutive 0 => re-appearing
+    dt[6] == TRUE & dt[2] == TRUE ~ 1,  # appearing / re-appearing
+    dt[7] == TRUE & dt[8] == FALSE ~ 2, # Last year increase but not maximum => potentially emerging
+    dt[3] == TRUE ~ 2,                  # potentially emerging
+    dt[8] == TRUE & dt[1] == FALSE ~ 3  # maximum ever observerd => emerging
   )
 
   if (is.na(em)) em <- 0
