@@ -13,10 +13,10 @@ selspec <- function(df, specs){
   # sp <- c("3053406")
   # sp <- c("2867614")
   # #sp <- c("2882849")
-  sp <- sample(x = specs, size = 20)
-  #
-   df_sel <- df %>%
-     filter(taxonKey %in% sp)
+  # sp <- sample(x = specs, size = 20)
+  # #
+  df_sel <- df %>%
+      filter(taxonKey %in% specs)
 
   return(df_sel)
 }

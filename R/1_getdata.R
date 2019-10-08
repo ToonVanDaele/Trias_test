@@ -37,6 +37,10 @@ df_xy <- df_xy %>%
   mutate(x = x / 1000,
          y = y / 1000)
 
+df_xy$x5 <- as.integer(df_xy$x / 5) * 5
+df_xy$y5 <- as.integer(df_xy$y / 5) * 5
+df_xy$cell_code5 <- paste0(df_xy$x5, "_", df_xy$y5)
+
 saveRDS(df_xy, file = "./data/df_xy.RDS")
 
 

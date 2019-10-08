@@ -11,7 +11,7 @@
 # - result result of try (to capture errors)
 
 
-spGAM_lcount <- function(df, printplot = FALSE, saveplot = FALSE) {
+spGAM_lcount <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE) {
 
   require(mgcv)
   require(gratia)
@@ -82,16 +82,16 @@ spGAM_lcount <- function(df, printplot = FALSE, saveplot = FALSE) {
 
   df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = "GAM_lcount",
                   em = out)
+  if (savemodel == FALSE) g1 <- NULL
   return(list(em = df_em, model = g1, df_n = df_n, em_level_gam = em_level_gam,
               deriv1 = deriv1, deriv2 = deriv2, plot = g, result = result))
 }
 
 
 
-
 ### GAM lumped presence absence (ncell)
 
-spGAM_lpa <- function(df, printplot = FALSE, saveplot = FALSE) {
+spGAM_lpa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE) {
 
   require(mgcv)
   require(gratia)
@@ -162,6 +162,7 @@ spGAM_lpa <- function(df, printplot = FALSE, saveplot = FALSE) {
 
   df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = "GAM_lpa",
                   em = out)
+  if (savemodel == FALSE) g1 <- NULL
   return(list(em = df_em, model = g1, df_n = df_n, em_level_gam = em_level_gam,
               deriv1 = deriv1, deriv2 = deriv2, plot = g, result = result))
 }
