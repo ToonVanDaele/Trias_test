@@ -88,3 +88,41 @@ em_level <- function(df1, df2){
 
 }
 
+
+# Apply model and save output
+
+apply_method <- function(df, em_method, n2k = FALSE){
+
+  df <- df %>% group_by(taxonKey)
+  taxl <- df %>% group_keys() %>% pull(taxonKey)
+
+  result_list <- df %>%
+    group_split() %>%
+    map(.f = dfincr, eval_year, em_method) %>%
+    set_names(taxl)
+
+  filename <- paste0("./output/result_", em_method,
+                    ifelse(n2k == TRUE, "_n2k", ""), ".RDS")
+  saveRDS(result_list, file = filename)
+  return(filename)
+
+}
+
+
+
+# Retrieve em information from results
+
+get_em <- function(method_name, path){
+
+  filename = paste0(path, method_name, ".RDS")
+  cat(filename, "\n")
+  result <- readRDS(file = filename)
+
+  em_result <- result %>%
+    map_dfr(~ .x %>% map_dfr("em"))
+
+  remove(result)
+
+  return(em_result)
+
+}

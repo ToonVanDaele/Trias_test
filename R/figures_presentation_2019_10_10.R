@@ -5,6 +5,8 @@ library(INBOtheme)
 
 source(file = "./R/5d_method_GAM_pa.R")
 source(file = "./R/5c_method_GAM_short.R")
+source(file = "./R/9_function.R")
+source(file = "./R/9b_plot_function.R")
 
 df_pp <- readRDS(file = "./data/df_pp.RDS")
 df_s <- readRDS(file = "./data/df_s.RDS")
@@ -34,15 +36,20 @@ p1 <- df_s %>%
 plot(p1)
 ggsave("./plot_1.png", plot = p1)
 
+cbPalette <- c("#cccccc", "#000000")
 
 p2 <- df_s %>%
-  filter(taxonKey == spn & year > 2011) %>%
+  filter(taxonKey == spn & year %in% c(2000, 2005, 2010, 2015)) %>%
   left_join(spec_names %>%
               select(taxonKey, spn), by = c("taxonKey")) %>%
   left_join(df_xy, by = "eea_cell_code") %>%
-  ggplot(aes(x = x, y = y, colour = as.factor(pa_obs))) + geom_point() +
+  arrange(pa_obs) %>%
+  ggplot(aes(x = x, y = y, colour = as.factor(pa_obs))) + geom_point(size = 1) +
   coord_fixed() +
-  facet_wrap(~year, ncol = 3)
+  facet_wrap(~year, ncol = 2) +
+  theme(legend.position = "none") +
+  scale_colour_manual(values=cbPalette)
+
 
 plot(p2)
 ggsave("./plot_2.png", plot = p2)

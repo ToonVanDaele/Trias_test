@@ -123,3 +123,33 @@ preproc_pp <- function(df_s){
   return(df_pp)
 }
 
+### Preprocessing df_s_N2K
+
+preproc_s_N2k <- function(df){
+
+  df_s_N2k <- df %>%
+    left_join(df_xy %>%
+                select(eea_cell_code, natura2000),
+                by = "eea_cell_code") %>%
+      filter(natura2000 == TRUE)
+  return(df_s_N2k)
+}
+
+
+# Temporary workaround upscaling to 5x5km cells
+aggr_1to5 <- function(df){
+
+  df <- df %>%
+    left_join(df_xy %>%
+                select(eea_cell_code, x5, y5, cell_code5), by = "eea_cell_code")
+
+  df_s5 <- df %>%
+    group_by(taxonKey, year, classKey, cell_code5) %>%
+    summarise(x = first(x5),
+              y = first(y5),
+              cobs = sum(cobs),
+              obs = sum(obs),
+              pa_cobs = max(pa_cobs),
+              pa_obs = max(pa_obs))
+
+}
