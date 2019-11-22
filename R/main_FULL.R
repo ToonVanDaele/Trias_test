@@ -10,12 +10,12 @@ eval_year <- seq(from = lastyear - yb, to = lastyear, by = 1) # years to be eval
 
 # Load libraries & source function
 library(tidyverse)
-source(file = "./R/2_preproces_data.R")
-source(file = "./R/3_select_species.R")
-source(file = "./R/3b_incr_times_series.R")
+#source(file = "./R/2_preproces_data.R")
+#source(file = "./R/3_select_species.R")
+#source(file = "./R/3b_incr_times_series.R")
 source(file = "./R/4_method_decision_tree.R")
-source(file = "./R/5a_method_piecewise_regression.R")
-source(file = "./R/5b_method_INLA_AR.R")
+#source(file = "./R/5a_method_piecewise_regression.R")
+#source(file = "./R/5b_method_INLA_AR.R")
 source(file = "./R/5c_method_GAM_short.R")
 source(file = "./R/5d_method_GAM_pa.R")
 source(file = "./R/5e_method_GAM_count.R")
@@ -24,89 +24,125 @@ source(file = "./R/9b_plot_function.R")
 
 ## Load raw data
 # .RDS file are generated with 1_getdata.R
-df_in <- readRDS(file = "./data/cube_belgium.RDS")
-df_bl <- readRDS(file = "./data/cube_belgium_baseline.RDS")
+# df_in <- readRDS(file = "./data/cube_belgium.RDS")
+# df_bl <- readRDS(file = "./data/cube_belgium_baseline.RDS")
 spec_names <- readRDS(file = "./data/spec_names.RDS")
 df_xy <- readRDS(file = "./data/df_xy.RDS")
 
 ####################################################################
 # 1. Preprocessing
 # spatial data frame - full
-df_s <- preproc_s(df_in, df_bl, df_xy, spec_names,
-                  firstyear = firstyear, lastyear = lastyear)
-saveRDS(df_s, file = "./data/df_s.RDS")
-
-# spatial data frame - n2k only
-df_s_n2k <- preproc_s_N2k(df_s)
-saveRDS(df_s_n2k, file = "./data/df_s_n2k.RDS")
-
-# lumped data frame - full
-df_pp <- preproc_pp(df_s)
-saveRDS(df_pp, file = "./data/df_pp.RDS")
-
-# lumped data_frame - n2k only
-df_pp_n2k <- preproc_pp(df_s_n2k)
-saveRDS(df_pp_n2k, file = "./data/df_pp_n2k.RDS")
-
-# Aggregate spatial data frames to 5x5km cells (instead of 1x1km)
-df_s5 <- aggr_1to5(df_s)
-saveRDS(df_s5, file = "./data/df_s5.RDS")
-
-df_s5_n2k <- aggr_1to5(df_s_n2k)
-saveRDS(df_s5_n2k, file = "./data/df_s5_n2k.RDS")
-
+# df_s <- preproc_s(df_in, df_bl, df_xy, spec_names,
+#                   firstyear = firstyear, lastyear = lastyear)
+# saveRDS(df_s, file = "./data/df_s.RDS")
+#
+# # spatial data frame - n2k only
+# df_s_n2k <- preproc_s_N2k(df_s)
+# saveRDS(df_s_n2k, file = "./data/df_s_n2k.RDS")
+#
+# # lumped data frame - full
+# df_pp <- preproc_pp(df_s)
+# saveRDS(df_pp, file = "./data/df_pp.RDS")
+#
+# # lumped data_frame - n2k only
+# df_pp_n2k <- preproc_pp(df_s_n2k)
+# saveRDS(df_pp_n2k, file = "./data/df_pp_n2k.RDS")
+#
+# # Aggregate spatial data frames to 5x5km cells (instead of 1x1km)
+# df_s5 <- aggr_1to5(df_s)
+# saveRDS(df_s5, file = "./data/df_s5.RDS")
+#
+# df_s5_n2k <- aggr_1to5(df_s_n2k)
+# saveRDS(df_s5_n2k, file = "./data/df_s5_n2k.RDS")
+#
 ########################################################################
 # 2. modelling
+
+# Load data
+df_ts <- read_tsv(file = "./data/df_timeseries.tsv")
 
 ## Load preprocessed data (if needed)
 #df_s <- readRDS(file = "./data/df_s.RDS")   # Don't load 1x1km
 #df_s_n2k <- readRDS(file = "./data/df_s_n2k.RDS")   # Don't load 1x1km
 
-df_pp <- readRDS(file = "./data/df_pp.RDS")
-df_pp_n2k <- readRDS(file = "./data/df_pp_n2k.RDS")
+# df_pp <- readRDS(file = "./data/df_pp.RDS")
+# df_pp_n2k <- readRDS(file = "./data/df_pp_n2k.RDS")
+#
+# df_s5 <- readRDS(file = "./data/df_s5.RDS")
+# df_s5_n2k <- readRDS(file = "./data/df_s5_n2k.RDS")
 
-df_s5 <- readRDS(file = "./data/df_s5.RDS")
-df_s5_n2k <- readRDS(file = "./data/df_s5_n2k.RDS")
 
 ## Selection of species for testing
+df_ts <- filter(df_ts, taxonKey %in% unique(df_ts$taxonKey)[1:20])
 #df_s <- selspec(df = df_s, specs = spec_names$taxonKey[1:20])
 #df_s_n2k <- selspec(df = df_s_n2k, specs = spec_names$taxonKey[1:20])
-df_pp <- selspec(df = df_pp, specs = spec_names$taxonKey[1:100])
-df_s5 <- selspec(df = df_s5, specs = spec_names$taxonKey[1:100])
-df_pp_n2k <- selspec(df = df_pp_n2k, specs = spec_names$taxonKey[1:100])
-df_s5_n2k <- selspec(df = df_s5_n2k, specs = spec_names$taxonKey[1:100])
+# df_pp <- selspec(df = df_pp, specs = spec_names$taxonKey[1:100])
+# df_s5 <- selspec(df = df_s5, specs = spec_names$taxonKey[1:100])
+# df_pp_n2k <- selspec(df = df_pp_n2k, specs = spec_names$taxonKey[1:100])
+# df_s5_n2k <- selspec(df = df_s5_n2k, specs = spec_names$taxonKey[1:100])
+
+df_ts_n2k <- filter(df_ts, natura2000 == TRUE)
+
+df_pp <- df_ts %>%
+  group_by(taxonKey, year) %>%
+  summarise(obs = sum(obs),
+            cobs = sum(native_obs),
+            ncell = sum(pa_obs),
+            ncobs = sum(pa_native_obs)) %>%
+  ungroup()
+
+df_pp_n2k <- df_ts_n2k %>%
+  group_by(taxonKey, year) %>%
+  summarise(obs = sum(obs),
+            cobs = sum(native_obs),
+            ncell = sum(pa_obs),
+            ncobs = sum(pa_native_obs)) %>%
+  ungroup()
 
 ## Apply each method on all species
 
-## Full data set
-apply_method(df_pp, "spDT")   # Decision tree (no statistics)
+# All locations
 
-apply_method(df_pp, "spGAM_lcount")  # GAM occurences on lumped data
-apply_method(df_s5, "spGAM_count_ns") # GAM occurences + cobs  5x5km
-#apply_method(df_s5, "spGAM_count")    # GAM occurences + cobs + s(x,y)  5x5km
+#apply_method(df_s, "spGAM_count")    # GAM occurences + cobs + s(x,y)  5x5km
+#apply_method(df_s, "spGAM_pa")     # GAM occupancy + cobs + s(x,y) 5x5km
 
+apply_method(df_ts, "spGAM_count_ns") # GAM occurences + native_obs  1x1km
+apply_method(df_ts, "spGAM_pa_ns")  # GAM occupancy + native_obs 1x1km
+
+apply_method(df_pp, "spGAM_lcount_cobs")  # GAM number of cells with native_obs
+apply_method(df_pp, "spGAM_lcount")        # GAM occurences on lumped data
+
+apply_method(df_pp, "spGAM_lpa_cobs")    # GAM occupancy on lumped data
 apply_method(df_pp, "spGAM_lpa")    # GAM occupancy on lumped data
-apply_method(df_s5, "spGAM_pa_ns")  # GAM occupancy + cobs 5x5km
-#apply_method(df_s5, "spGAM_pa")     # GAM occupancy + cobs + s(x,y) 5x5km
 
-## Data in N2000 only
-apply_method(df_pp_n2k, "spDT", n2k = TRUE)   # Decision tree (no statistics) n2k
+apply_method(df_pp, "spDT")                # Decision tree (no statistics)
 
-apply_method(df_pp_n2k, "spGAM_lcount", n2k = TRUE)  # GAM occurences on lumped data
-apply_method(df_s5_n2k, "spGAM_count_ns", n2k = TRUE) # GAM occurences + cobs  5x5km
+
+## In N2000 only
+
 #apply_method(df_s5_n2k, "spGAM_count", n2k = TRUE)    # GAM occurences + cobs + s(x,y)  5x5km
-
-apply_method(df_pp_n2k, "spGAM_lpa", n2k = TRUE)    # GAM occupancy on lumped data
-apply_method(df_s5_n2k, "spGAM_pa_ns", n2k = TRUE)  # GAM occupancy + cobs 5x5km
 #apply_method(df_s5_n2k, "spGAM_pa", n2k = TRUE)     # GAM occupancy + cobs + s(x,y) 5x5km
 
+apply_method(df_ts_n2k, "spGAM_count_ns", n2k = TRUE) # GAM occurences + cobs  1x1km
+apply_method(df_ts_n2k, "spGAM_pa_ns", n2k = TRUE)  # GAM occupancy + cobs 1x1km
 
+apply_method(df_pp_n2k, "spGAM_lcount_cobs", n2k = TRUE)  # GAM occurences on lumped data
+apply_method(df_pp_n2k, "spGAM_lcount", n2k = TRUE)  # GAM occurences on lumped data
+
+apply_method(df_pp_n2k, "spGAM_lpa_cobs", n2k = TRUE)    # GAM occupancy on lumped data
+apply_method(df_pp_n2k, "spGAM_lpa", n2k = TRUE)    # GAM occupancy on lumped data
+
+apply_method(df_pp_n2k, "spDT", n2k = TRUE)   # Decision tree (no statistics) n2k
 # 3. Process output
 
 # List out output to be processed
 # full data
 out_list_full <- list("result_spDT", "result_spGAM_lcount", "result_spGAM_count_ns",
                       "result_spGAM_lpa", "result_spGAM_pa_ns")
+
+out_list_full <- list("result_spGAM_lpa_cobs", "result_spGAM_lcount_cobs",
+                      "result_spGAM_lpa", "result_spGAM_lcount",
+                      "result_spDT")
 
 # Extract 'emerging' information from each method and join
 result_full <- out_list_full %>%
@@ -128,20 +164,26 @@ result_n2k$method_em <- paste0(result_n2k$method_em, "_n2k")
 em <- rbind(result_full, result_n2k) %>%
   spread(key = method_em, value = em)
 
-em <- rbind(emDT, emGAM_lcount, emGAM_count_ns, emGAM_lpa, emGAM_pa_ns) %>%
-  spread(key = method_em, value = em)
+# em <- rbind(emDT, emGAM_lcount, emGAM_count_ns, emGAM_lpa, emGAM_pa_ns) %>%
+#   spread(key = method_em, value = em)
 
-# Correction of some error because an earlier model run is use
-em <- em %>%
-  rename(GAM_lcount = GAM)
+spec_names$taxonKey <- as.numeric(spec_names$taxonKey)
+
+selection_list <- c('taxonKey', 'spn', 'eyear',
+'DT_n2k', 'GAM_lcount_n2k', 'GAM_count_ns_n2k', 'GAM_lpa_n2k', 'GAM_pa_ns_n2k',
+'DT', 'GAM_lcount', 'GAM_count_ns', 'GAM_lpa', 'GAM_pa_ns')
+
+selection_list <- c('taxonKey', 'spn', 'eyear',
+                    'DT_n2k', 'GAM_lcount_n2k', 'GAM_lpa_n2k',
+                    'DT', 'GAM_lcount', 'GAM_lpa')
+
 
 em <- em %>%
   left_join(spec_names %>%
               select(taxonKey, spn),
             by = "taxonKey") %>%
-  select('taxonKey', 'spn', 'eyear',
-         'DT_n2k', 'GAM_lcount_n2k', 'GAM_count_ns_n2k', 'GAM_lpa_n2k', 'GAM_pa_ns_n2k',
-         'DT', 'GAM_lcount', 'GAM_count_ns', 'GAM_lpa', 'GAM_pa_ns')
+  select(selection_list)
+
 
 # should be corrected too
 result_models_df <- em
@@ -150,27 +192,26 @@ result_models_df <- em
 result_indicator_df <-
   result_models_df %>%
   group_by(taxonKey, spn, eyear) %>%
-  summarize(occ = ifelse(is.na(GAM_count_ns),
+  summarize(occ = ifelse("GAM_count_ns" %in% names(result_models_df) && !is.na(GAM_count_ns),
+                         GAM_count_ns,
                          ifelse(is.na(GAM_lcount),
                                 DT,
-                                GAM_lcount),
-                         GAM_count_ns),
-            aoo = ifelse(is.na(GAM_pa_ns),
+                                GAM_lcount)),
+            aoo = ifelse("GAM_pa_ns" %in% names(result_models_df) && !is.na(GAM_pa_ns),
+                         GAM_pa_ns,
                          ifelse(is.na(GAM_lpa),
                                       DT,
-                                      GAM_lpa),
-                                GAM_pa_ns),
-            occ_n2k = ifelse(is.na(GAM_count_ns_n2k),
-                         ifelse(is.na(GAM_lcount_n2k),
+                                      GAM_lpa)),
+            occ_n2k = ifelse("GAM_count_ns_n2k" %in% names(result_models_df) && !is.na(GAM_count_ns_n2k),
+                             GAM_count_ns_n2k,
+                             ifelse(is.na(GAM_lcount_n2k),
                                 DT_n2k,
-                                GAM_lcount_n2k),
-                         GAM_count_ns_n2k),
-            aoo_n2k = ifelse(is.na(GAM_pa_ns_n2k),
-                         ifelse(is.na(GAM_lpa_n2k),
+                                GAM_lcount_n2k)),
+            aoo_n2k = ifelse("GAM_pa_ns_n2k" %in% names(result_models_df) && !is.na(GAM_pa_ns_n2k),
+                             GAM_pa_ns_n2k,
+                             ifelse(is.na(GAM_lpa_n2k),
                                 DT_n2k,
-                                GAM_lpa_n2k),
-                         GAM_pa_ns_n2k)
-  ) %>%
+                                GAM_lpa_n2k))) %>%
   ungroup()
 
 # Ranking

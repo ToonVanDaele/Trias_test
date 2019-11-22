@@ -10,8 +10,11 @@
 # - deriv1, deriv2 dataframes with 1st & 2nd derivatives of smoother 'year'
 # - result result of try (to capture errors)
 
+#########################################################
+# GAM lumped data on time series. Only year as covariate
 
-spGAM_lcount <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE) {
+spGAM_lcount <- function(df, native_obs = FALSE,
+                         printplot = FALSE, saveplot = FALSE, savemodel = FALSE) {
 
   require(mgcv)
   require(gratia)
@@ -21,20 +24,27 @@ spGAM_lcount <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FA
   spec <- df[[1,1]]     # species name (taxonKey)
   spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn) %>% as.character()
   print(paste0(spec, "_", spn, "_", lyear))
-  ptitle <- paste0("GAM_lcount/", spec, "_", spn, "_", lyear)
+
+  if (native_obs == TRUE) {
+    method_em = "GAM_lcount_cobs"
+    fm <- formula(obs ~ s(year, k = maxk, m = 3, bs = "tp") + s(cobs))
+    ptitle <- paste0("GAM_lcount_cobs/", spec, "_", spn, "_", lyear)
+  }else{
+    method_em = "GAM_lcount"
+    fm <- formula(obs ~ s(year, k = maxk, m = 3, bs = "tp"))
+    ptitle <- paste0("GAM_lcount/", spec, "_", spn, "_", lyear)
+  }
 
   if (nrow(df) > 3 & sum(df$obs[2:nrow(df)]) != 0) {
 
     result <- try({
 
       maxk <- max(round((lyear - fyear) / 10, 0), 5)  # 1 knot per decade
-      g1 <- gam(obs ~ s(year, k = maxk, m = 3, bs = "tp"),
+      g1 <- gam(formula = fm,
                   family = nb(),
                 data = df, method = "REML")
 
-      # draw(g1)
-      # Predict to new data (5 values per year)
-      df_n <- df
+      df_n <- df  # New data for predict
       temp <- predict(object = g1, newdata = df_n, type = "iterms",
                       interval = "prediction",
                       se.fit = TRUE)
@@ -53,7 +63,8 @@ spGAM_lcount <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FA
       #draw(deriv1) #draw(deriv2)
 
       # Emerging status based on first and second derivative
-      em_level_gam <- em_level(deriv1, deriv2)
+      em_level_gam <- em_level(filter(deriv1, smooth == "s(year)"),
+                               filter(deriv2, smooth == "s(year)"))
       df_n <- bind_cols(df_n, em_level_gam)
 
       # Create plot with conf. interval + colour for status
@@ -80,7 +91,7 @@ spGAM_lcount <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FA
 
   # p-waarde van de smoother te groot -> output NA toevoegen
 
-  df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = "GAM_lcount",
+  df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = method_em,
                   em = out)
   if (savemodel == FALSE) g1 <- NULL
   return(list(em = df_em, model = g1, df_n = df_n, em_level_gam = em_level_gam,
@@ -88,10 +99,20 @@ spGAM_lcount <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FA
 }
 
 
+### GAM lumped count with ncobs (observations native species)
+spGAM_lcount_cobs <- function(df, printplot = FALSE, saveplot = FALSE,
+                               savemodel = FALSE){
+
+  spGAM_lcount(df = df, native_obs = TRUE, printplot = printplot,
+               saveplot = saveplot, savemodel = savemodel)
+
+}
+
 
 ### GAM lumped presence absence (ncell)
 
-spGAM_lpa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE) {
+spGAM_lpa <- function(df, native_obs = FALSE, printplot = FALSE,
+                      saveplot = FALSE, savemodel = FALSE) {
 
   require(mgcv)
   require(gratia)
@@ -101,14 +122,24 @@ spGAM_lpa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE
   spec <- df[[1,1]]     # species name (taxonKey)
   spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn) %>% as.character()
   print(paste0(spec, "_", spn, "_", lyear))
-  ptitle <- paste0("GAM_lpa/", spec, "_", spn, "_", lyear)
+
+  if (native_obs == TRUE) {
+    method_em <- "GAM_lpa_cobs"
+    fm <- formula(obs ~ s(year, k = maxk, m = 3, bs = "tp") + s(cobs))
+    ptitle <- paste0("GAM_lpa_cobs/", spec, "_", spn, "_", lyear)
+  }else{
+    method_em <- "GAM_lpa"
+    fm <- formula(obs ~ s(year, k = maxk, m = 3, bs = "tp"))
+    ptitle <- paste0("GAM_lpa/", spec, "_", spn, "_", lyear)
+  }
+
 
   if (nrow(df) > 3 & sum(df$obs[2:nrow(df)]) != 0) {
 
     result <- try({
 
       maxk <- max(round((lyear - fyear) / 10, 0), 5)  # 1 knot per decade
-      g1 <- gam(ncell ~ s(year, k = maxk, m = 3, bs = "tp"),
+      g1 <- gam(formula = fm,
                 family = nb(),
                 data = df, method = "REML")
 
@@ -133,7 +164,8 @@ spGAM_lpa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE
       #draw(deriv1) #draw(deriv2)
 
       # Emerging status based on first and second derivative
-      em_level_gam <- em_level(deriv1, deriv2)
+      em_level_gam <- em_level(filter(deriv1, smooth == "s(year)"),
+                               filter(deriv2, smooth == "s(year)"))
       df_n <- bind_cols(df_n, em_level_gam)
 
       # Create plot with conf. interval + colour for status
@@ -160,7 +192,7 @@ spGAM_lpa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE
 
   # p-waarde van de smoother te groot -> output NA toevoegen
 
-  df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = "GAM_lpa",
+  df_em <- tibble(taxonKey = df[[1,1]], eyear = lyear, method_em = method_em,
                   em = out)
   if (savemodel == FALSE) g1 <- NULL
   return(list(em = df_em, model = g1, df_n = df_n, em_level_gam = em_level_gam,
@@ -168,5 +200,10 @@ spGAM_lpa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE
 }
 
 
+## GAM presence / absence with native observations (cobs)
+spGAM_lpa_cobs <- function(df, native_obs = FALSE, printplot = FALSE,
+                      saveplot = FALSE, savemodel = FALSE) {
 
-
+  spGAM_lpa(df = df, native_obs = TRUE, printplot = printplot,
+  saveplot = saveplot, savemodel = savemodel)
+}

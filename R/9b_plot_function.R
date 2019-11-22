@@ -9,7 +9,7 @@
 plot_ts <- function(df, y_axis = "ncell", ptitle = NULL,
                     printplot = FALSE, saveplot = FALSE){
 
-  spec <- df[[1,1]]
+  spec <- df[[1,"taxonKey"]]
   lyear <- max(df$year)
 
   if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}

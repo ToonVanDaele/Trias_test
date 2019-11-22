@@ -34,7 +34,7 @@ spGAM_count <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FAL
 
   result <- try({
       g1 <- gam(obs ~ s(year, k = maxk, m = 3, bs = "tp") +
-                s(cobs) + s(x, y, bs = "gp", k = 100, m = c(3, 10)),
+                s(native_obs) + s(x, y, bs = "gp", k = 100, m = c(3, 10)),
                 family = nb(),
               data = df, method = "REML")
 
@@ -77,7 +77,8 @@ spGAM_count <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FAL
     #draw(deriv1) #draw(deriv2)
 
     # Emerging status based on first and second derivative
-    em_level_gam <- em_level(deriv1, deriv2)
+    em_level_gam <- em_level(filter(deriv1, smooth == "s(year)"),
+                             filter(deriv2, smooth == "s(year)"))
     df_new <- bind_cols(df_new, em_level_gam)
 
     out <- em_gam2em(em_level_gam) # get emerging status of the last year
@@ -101,9 +102,6 @@ spGAM_count <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FAL
 }
 
 
-
-
-
 ### GAM count without spatial smooth
 
 spGAM_count_ns <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE) {
@@ -122,7 +120,7 @@ spGAM_count_ns <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = 
 
   result <- try({
     g1 <- gam(obs ~ s(year, k = maxk, m = 3, bs = "tp") +
-                s(cobs),
+                s(native_obs),
               family = nb(),
               data = df, method = "REML")
 
