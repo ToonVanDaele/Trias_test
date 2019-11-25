@@ -4,9 +4,8 @@
 
 # Some overall parameters
 firstyear <- 1980
-lastyear <- 2017
-yb <- 2   # Number of last years to be evaluated
-eval_year <- seq(from = lastyear - yb, to = lastyear, by = 1) # years to be evaluated
+lastyear <- 2018
+nbyear <- 3   # Number of last years to be evaluated
 
 # Load libraries & source function
 library(tidyverse)
@@ -81,6 +80,10 @@ df_ts <- filter(df_ts, taxonKey %in% unique(df_ts$taxonKey)[1:20])
 # df_pp_n2k <- selspec(df = df_pp_n2k, specs = spec_names$taxonKey[1:100])
 # df_s5_n2k <- selspec(df = df_s5_n2k, specs = spec_names$taxonKey[1:100])
 
+# Filter last year
+df_ts <- filter(df_ts, year <= lastyear)
+
+# Create data sets for natura2000 and lumped data
 df_ts_n2k <- filter(df_ts, natura2000 == TRUE)
 
 df_pp <- df_ts %>%
@@ -106,8 +109,8 @@ df_pp_n2k <- df_ts_n2k %>%
 #apply_method(df_s, "spGAM_count")    # GAM occurences + cobs + s(x,y)  5x5km
 #apply_method(df_s, "spGAM_pa")     # GAM occupancy + cobs + s(x,y) 5x5km
 
-apply_method(df_ts, "spGAM_count_ns") # GAM occurences + native_obs  1x1km
-apply_method(df_ts, "spGAM_pa_ns")  # GAM occupancy + native_obs 1x1km
+# apply_method(df_ts, "spGAM_count_ns") # GAM occurences + native_obs  1x1km
+# apply_method(df_ts, "spGAM_pa_ns")  # GAM occupancy + native_obs 1x1km
 
 apply_method(df_pp, "spGAM_lcount_cobs")  # GAM number of cells with native_obs
 apply_method(df_pp, "spGAM_lcount")        # GAM occurences on lumped data
@@ -123,8 +126,8 @@ apply_method(df_pp, "spDT")                # Decision tree (no statistics)
 #apply_method(df_s5_n2k, "spGAM_count", n2k = TRUE)    # GAM occurences + cobs + s(x,y)  5x5km
 #apply_method(df_s5_n2k, "spGAM_pa", n2k = TRUE)     # GAM occupancy + cobs + s(x,y) 5x5km
 
-apply_method(df_ts_n2k, "spGAM_count_ns", n2k = TRUE) # GAM occurences + cobs  1x1km
-apply_method(df_ts_n2k, "spGAM_pa_ns", n2k = TRUE)  # GAM occupancy + cobs 1x1km
+# apply_method(df_ts_n2k, "spGAM_count_ns", n2k = TRUE) # GAM occurences + cobs  1x1km
+# apply_method(df_ts_n2k, "spGAM_pa_ns", n2k = TRUE)  # GAM occupancy + cobs 1x1km
 
 apply_method(df_pp_n2k, "spGAM_lcount_cobs", n2k = TRUE)  # GAM occurences on lumped data
 apply_method(df_pp_n2k, "spGAM_lcount", n2k = TRUE)  # GAM occurences on lumped data
@@ -137,8 +140,8 @@ apply_method(df_pp_n2k, "spDT", n2k = TRUE)   # Decision tree (no statistics) n2
 
 # List out output to be processed
 # full data
-out_list_full <- list("result_spDT", "result_spGAM_lcount", "result_spGAM_count_ns",
-                      "result_spGAM_lpa", "result_spGAM_pa_ns")
+#out_list_full <- list("result_spDT", "result_spGAM_lcount", "result_spGAM_count_ns",
+#                      "result_spGAM_lpa", "result_spGAM_pa_ns")
 
 out_list_full <- list("result_spGAM_lpa_cobs", "result_spGAM_lcount_cobs",
                       "result_spGAM_lpa", "result_spGAM_lcount",
@@ -160,8 +163,8 @@ saveRDS(result_n2k, file = "./output/result_n2k.RDS")
 
 result_n2k$method_em <- paste0(result_n2k$method_em, "_n2k")
 
-
 em <- rbind(result_full, result_n2k) %>%
+  select(-lcl) %>%
   spread(key = method_em, value = em)
 
 # em <- rbind(emDT, emGAM_lcount, emGAM_count_ns, emGAM_lpa, emGAM_pa_ns) %>%

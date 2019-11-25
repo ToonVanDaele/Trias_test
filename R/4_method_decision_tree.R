@@ -12,14 +12,36 @@
 #' @param df data frame with time series
 #' @return list with dataframe, emergency status and tests
 
-spDT <- function(df){
+spDT <- function(df, nbyear = 3){
 
+  # Init
   spec <- df[[1,1]]     # species name
   spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn) %>% as.character()
+  maxyear <- max(df$year)
+  ptitle <- paste0("/dt/", spec, "_", spn, "_DT_", maxyear)
+  cat(ptitle, "\n")
+
+  # Decision rules
+  df_em <- map_dfr(c(1:nbyear), function(eyear){
+    df2 <- filter(df, year <= maxyear - eyear + 1)
+    df_out <- spDT_base(df = df2, spec = spec)
+    return(df_out)
+  })
+
+  # plot
+  ptitle <- paste0(spec, "_", spn, "_em: ", df_em$em[df_em$eyear == maxyear])
+  g <- plot_ts(df = df, ptitle = ptitle)
+
+  # output
+  outlist <- list(plot = g, df_em = df_em)
+  return(outlist)
+}
+
+
+spDT_base <- function(df, spec){
+
   lyear <- max(df$year) # last year
   nb <- nrow(df)        # length of time series
-  ptitle <- paste0("/dt/", spec, "_", spn, "_DT_",lyear)
-  cat(ptitle, "\n")
 
   dt <- rep(FALSE, 8)  # Vector to store results of tests (default = FALSE)
 
@@ -66,12 +88,7 @@ spDT <- function(df){
 
   if (is.na(em)) em <- 0
 
-  ptitle <- paste0(spec, "_", lyear, "_", em)
-  g <- plot_ts(df = df, ptitle = ptitle)
-
-  df_em <- tibble(taxonKey = spec, eyear = lyear,  method_em = "DT", em = em)
-  outlist <- list(dt = dt, plot = g, em = df_em)
-  return(outlist)
+  return(df_em <- tibble(taxonKey = spec, eyear = lyear,  method_em = "DT", em = em))
 }
 
 

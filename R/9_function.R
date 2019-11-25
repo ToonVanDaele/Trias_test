@@ -12,16 +12,16 @@ get_em_levels <- function(){
 
 
 # Map em_gam out to em
-em_gam2em <- function(em_gam){
+em_gam2em <- function(em_gam, nbyear){
 
   em <- em_gam %>%
-    filter(year == max(year)) %>%
+    filter(year >= max(year) - nbyear + 1) %>%
     mutate(em_out = case_when(
       em < 0 ~ 0,
       em == 0 ~ 1,
       em < 3 ~ 2,
       em >= 3 ~ 3)) %>%
-    .$em_out
+    select(year, em_out)
 
     return(em)
 }
@@ -98,7 +98,7 @@ apply_method <- function(df, em_method, n2k = FALSE){
 
   result_list <- df %>%
     group_split() %>%
-    map(.f = dfincr, eval_year, em_method) %>%
+    map(.f = get(em_method)) %>%
     set_names(taxl)
 
   filename <- paste0("./output/result_", em_method,
@@ -118,11 +118,21 @@ get_em <- function(method_name, path){
   cat(filename, "\n")
   result <- readRDS(file = filename)
 
-  em_result <- result %>%
-    map_dfr(~ .x %>% map_dfr("em"))
+  em_result <- map_dfr(result, "df_em")
 
   remove(result)
 
   return(em_result)
+}
 
+# Calculate the mean lower confidence level of the first derivative of the
+# last three years
+get_lcl <- function(df_deriv, nbyear){
+
+  lcl <- df_deriv %>%
+    filter(var == "year") %>%
+    filter(data > max(data) - nbyear + 1) %>%
+    select(year = data, lcl = lower)
+
+  return(lcl)
 }

@@ -82,6 +82,9 @@ spGAM_pa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE)
 
     out <- em_gam2em(em_level_gam) # get emerging status of the last year
 
+    # Mean lower confidence limit of the last three years from the first derivative
+    mlcl_y3 <- get_lcl_y3(deriv1)
+
     # p-waarde van de smoother te groot -> output NA toevoegen
 
 
@@ -93,7 +96,7 @@ spGAM_pa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE)
   }
 
   df_em <- tibble(taxonKey = spec, eyear = lyear, method_em = "GAM_pa",
-                  em = out)
+                  em = out, mlcl_y3 = mlcl_y3)
 
   end <- date()
   if (savemodel == FALSE) g1 <- NULL
@@ -167,6 +170,10 @@ spGAM_pa_ns <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FAL
 
     out <- em_gam2em(em_level_gam) # get emerging status of the last year
 
+    # Mean lower confidence limit of the last three years from the first derivative
+    mlcl_y3 <- get_lcl_y3(deriv1)
+
+
     # p-waarde van de smoother te groot -> output NA toevoegen
 
 
@@ -178,7 +185,7 @@ spGAM_pa_ns <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FAL
   }
 
   df_em <- tibble(taxonKey = spec, eyear = lyear, method_em = "GAM_pa_ns",
-                  em = out)
+                  em = out, mlcl_y3 = mlcl_y3)
 
   if (savemodel == FALSE) g1 <- NULL
   return(list(em = df_em, model = g1, em_level_gam = em_level_gam,
