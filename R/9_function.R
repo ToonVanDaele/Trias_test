@@ -60,14 +60,16 @@ em_level <- function(df1, df2){
       .$lower < 0  & .$upper < 0 ~ "-1",
       .$lower < 0  & .$upper > 0 ~ "0",
       .$lower > 0  & .$upper > 0 ~ "1")) %>%
-    dplyr::select(year = data, em1)
+    dplyr::select(year = data, em1) %>%
+    mutate(year = round(year, 0))
 
   em2 <- df2 %>%
     mutate(em2 = case_when(
       .$lower < 0  & .$upper < 0 ~ "-1",
       .$lower < 0  & .$upper > 0 ~ "0",
       .$lower > 0  & .$upper > 0 ~ "1")) %>%
-    dplyr::select(year = data, em2)
+    dplyr::select(year = data, em2) %>%
+    mutate(year = round(year, 0))
 
   # Optie om hier continue score van te maken?
   # Combineren van 1ste en 2de afgeleide
@@ -132,7 +134,28 @@ get_lcl <- function(df_deriv, nbyear){
   lcl <- df_deriv %>%
     filter(var == "year") %>%
     filter(data > max(data) - nbyear + 1) %>%
-    select(year = data, lcl = lower)
+    select(year = data, lcl = lower) %>%
+    mutate(year = round(year, 0))
 
   return(lcl)
+}
+
+add_spec <- function(df_ts, spec_names){
+
+  df_ts_species <- unique(df_ts$taxonKey)
+  speclist <- df_ts_species[!df_ts_species %in% spec_names$taxonKey]
+
+  if (!length(speclist) == 0){
+    library(rgbif)
+    new_spec_names <- data.frame(taxonKey = speclist,
+                             spn = map_chr(speclist, ~ name_usage(.)$data$canonicalName),
+                             kingdomKey = map_chr(speclist, ~ name_usage(.)$data$kingdomKey),
+                             classKey = map_chr(speclist, ~ name_usage(.)$data$classKey),
+                             stringsAsFactors = FALSE)
+
+    spec_names <- rbind(spec_names, new_spec_names)
+    # write species list with name (canonical), taxon-, kingdom- and classKey
+    saveRDS(object = spec_names, file = "./data/spec_names.RDS")
+  }
+  return(spec_names)
 }

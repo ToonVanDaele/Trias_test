@@ -77,11 +77,6 @@ spGAM_lcount <- function(df, native_obs = FALSE, nbyear = 3,
       # Mean lower confidence limit from the first derivative
       df_lcl <- get_lcl(deriv1, nbyear)
 
-      # Create plot with conf. interval + colour for status
-
-      g <- plot_ribbon_em(df_n = df_n, y_axis = "obs", df = df, ptitle = ptitle,
-                          printplot = printplot, saveplot = saveplot)
-
       out <- em_gam2em(em_level_gam, nbyear) # get emerging status
 
       df_em <- tibble(taxonKey = spec, eyear = out$year, method_em = method_em,
@@ -90,6 +85,11 @@ spGAM_lcount <- function(df, native_obs = FALSE, nbyear = 3,
       df_em <- df_em %>%
         left_join(df_lcl %>%
                     select(year, lcl), by = c("eyear" = "year"))
+
+      # Create plot with conf. interval + colour for status
+      g <- plot_ribbon_em(df_n = df_n, y_axis = "obs", df = df, ptitle = ptitle,
+                          printplot = printplot, saveplot = saveplot)
+
 
     })
 

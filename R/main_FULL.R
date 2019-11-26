@@ -11,7 +11,6 @@ nbyear <- 3   # Number of last years to be evaluated
 library(tidyverse)
 #source(file = "./R/2_preproces_data.R")
 #source(file = "./R/3_select_species.R")
-#source(file = "./R/3b_incr_times_series.R")
 source(file = "./R/4_method_decision_tree.R")
 #source(file = "./R/5a_method_piecewise_regression.R")
 #source(file = "./R/5b_method_INLA_AR.R")
@@ -70,22 +69,33 @@ df_ts <- read_tsv(file = "./data/df_timeseries.tsv")
 # df_s5 <- readRDS(file = "./data/df_s5.RDS")
 # df_s5_n2k <- readRDS(file = "./data/df_s5_n2k.RDS")
 
-
 ## Selection of species for testing
-df_ts <- filter(df_ts, taxonKey %in% unique(df_ts$taxonKey)[1:20])
-#df_s <- selspec(df = df_s, specs = spec_names$taxonKey[1:20])
-#df_s_n2k <- selspec(df = df_s_n2k, specs = spec_names$taxonKey[1:20])
-# df_pp <- selspec(df = df_pp, specs = spec_names$taxonKey[1:100])
-# df_s5 <- selspec(df = df_s5, specs = spec_names$taxonKey[1:100])
-# df_pp_n2k <- selspec(df = df_pp_n2k, specs = spec_names$taxonKey[1:100])
-# df_s5_n2k <- selspec(df = df_s5_n2k, specs = spec_names$taxonKey[1:100])
+#df_ts <- filter(df_ts, taxonKey %in% unique(df_ts$taxonKey)[1:20])
+
+# Filter some species - problem with taxonKey
+df_ts <- filter(df_ts, !taxonKey %in% c("10173593", "10172912", "10661581"))
+
+# Check for species in spec_names and add new species names if necessary
+spec_names <- add_spec(df_ts, spec_names)
 
 # Filter last year
 df_ts <- filter(df_ts, year <= lastyear)
 
-# Create data sets for natura2000 and lumped data
-df_ts_n2k <- filter(df_ts, natura2000 == TRUE)
+## Create data set for natura2000
 
+# Identify for each species the first year with an observation
+df_begin_n2k <- df_ts %>%
+  filter(natura2000 == TRUE & obs > 0) %>%
+  group_by(taxonKey) %>%
+  summarize(begin_year = min(year))
+
+df_ts_n2k <- df_ts %>%
+  filter(natura2000 == TRUE) %>%
+  left_join(df_begin_n2k, by = "taxonKey") %>%
+  filter(year >= begin_year) %>%
+  select(-begin_year, -natura2000)
+
+# Data sets for the lumped data
 df_pp <- df_ts %>%
   group_by(taxonKey, year) %>%
   summarise(obs = sum(obs),
@@ -136,9 +146,9 @@ apply_method(df_pp_n2k, "spGAM_lpa_cobs", n2k = TRUE)    # GAM occupancy on lump
 apply_method(df_pp_n2k, "spGAM_lpa", n2k = TRUE)    # GAM occupancy on lumped data
 
 apply_method(df_pp_n2k, "spDT", n2k = TRUE)   # Decision tree (no statistics) n2k
+
 # 3. Process output
 
-# List out output to be processed
 # full data
 #out_list_full <- list("result_spDT", "result_spGAM_lcount", "result_spGAM_count_ns",
 #                      "result_spGAM_lpa", "result_spGAM_pa_ns")
@@ -163,7 +173,7 @@ saveRDS(result_n2k, file = "./output/result_n2k.RDS")
 
 result_n2k$method_em <- paste0(result_n2k$method_em, "_n2k")
 
-em <- rbind(result_full, result_n2k) %>%
+df_em <- rbind(result_full, result_n2k) %>%
   select(-lcl) %>%
   spread(key = method_em, value = em)
 
@@ -172,49 +182,54 @@ em <- rbind(result_full, result_n2k) %>%
 
 spec_names$taxonKey <- as.numeric(spec_names$taxonKey)
 
-selection_list <- c('taxonKey', 'spn', 'eyear',
-'DT_n2k', 'GAM_lcount_n2k', 'GAM_count_ns_n2k', 'GAM_lpa_n2k', 'GAM_pa_ns_n2k',
-'DT', 'GAM_lcount', 'GAM_count_ns', 'GAM_lpa', 'GAM_pa_ns')
+# selection_list <- c('taxonKey', 'spn', 'eyear',
+# 'DT_n2k', 'GAM_lcount_n2k', 'GAM_count_ns_n2k', 'GAM_lpa_n2k', 'GAM_pa_ns_n2k',
+# 'DT', 'GAM_lcount', 'GAM_count_ns', 'GAM_lpa', 'GAM_pa_ns')
 
 selection_list <- c('taxonKey', 'spn', 'eyear',
-                    'DT_n2k', 'GAM_lcount_n2k', 'GAM_lpa_n2k',
-                    'DT', 'GAM_lcount', 'GAM_lpa')
+                    'DT_n2k', 'GAM_lcount_cobs_n2k', 'GAM_lcount_n2k',
+                    'GAM_lpa_cobs_n2k', 'GAM_lpa_n2k',
+                    'DT', 'GAM_lcount_cobs', 'GAM_lcount',
+                    'GAM_lpa_cobs', 'GAM_lpa')
 
-
-em <- em %>%
+df_em <- df_em %>%
   left_join(spec_names %>%
               select(taxonKey, spn),
             by = "taxonKey") %>%
   select(selection_list)
 
-
-# should be corrected too
-result_models_df <- em
+# Add lower confidence level value for GAM_lpa_cobs_n2k
+df_em <- df_em %>%
+  left_join(result_n2k %>%
+              filter(method_em == "GAM_lpa_cobs_n2k") %>%
+              select(taxonKey, eyear, lcl),
+            by = c("taxonKey", "eyear"))
 
 # Get one value per indicator (if GAM_*: NA -> DT_*)
 result_indicator_df <-
-  result_models_df %>%
+  df_em %>%
   group_by(taxonKey, spn, eyear) %>%
-  summarize(occ = ifelse("GAM_count_ns" %in% names(result_models_df) && !is.na(GAM_count_ns),
+  summarize(occ = ifelse("GAM_count_ns" %in% names(df_em) && !is.na(GAM_count_ns),
                          GAM_count_ns,
                          ifelse(is.na(GAM_lcount),
                                 DT,
                                 GAM_lcount)),
-            aoo = ifelse("GAM_pa_ns" %in% names(result_models_df) && !is.na(GAM_pa_ns),
+            aoo = ifelse("GAM_pa_ns" %in% names(df_em) && !is.na(GAM_pa_ns),
                          GAM_pa_ns,
                          ifelse(is.na(GAM_lpa),
                                       DT,
                                       GAM_lpa)),
-            occ_n2k = ifelse("GAM_count_ns_n2k" %in% names(result_models_df) && !is.na(GAM_count_ns_n2k),
+            occ_n2k = ifelse("GAM_count_ns_n2k" %in% names(df_em) && !is.na(GAM_count_ns_n2k),
                              GAM_count_ns_n2k,
                              ifelse(is.na(GAM_lcount_n2k),
                                 DT_n2k,
                                 GAM_lcount_n2k)),
-            aoo_n2k = ifelse("GAM_pa_ns_n2k" %in% names(result_models_df) && !is.na(GAM_pa_ns_n2k),
+            aoo_n2k = ifelse("GAM_pa_ns_n2k" %in% names(df_em) && !is.na(GAM_pa_ns_n2k),
                              GAM_pa_ns_n2k,
                              ifelse(is.na(GAM_lpa_n2k),
                                 DT_n2k,
-                                GAM_lpa_n2k))) %>%
+                                GAM_lpa_n2k)),
+            lcl = lcl) %>%
   ungroup()
 
 # Ranking
@@ -238,69 +253,61 @@ ranking_df_aoo_n2k <-
   select(taxonKey, eyear, aoo_n2k) %>%
   spread(key = eyear, value = aoo_n2k, sep = "aoo_n2k_")
 
+df_mean_lcl <-
+  result_indicator_df %>%
+  group_by(taxonKey) %>%
+  summarise(mean_lcl = round(mean(lcl), 3))
+
 ranking_df <- ranking_df_occ %>%
   left_join(ranking_df_aoo, by = "taxonKey") %>%
   left_join(ranking_df_occ_n2k, by = "taxonKey") %>%
   left_join(ranking_df_aoo_n2k, by = "taxonKey") %>%
+  left_join(df_mean_lcl, by = "taxonKey") %>%
   rename_at(vars(starts_with("eyear")), ~str_remove(., pattern = "eyear")) %>%
   group_by(taxonKey, spn) %>%
   arrange(
+    desc(aoo_n2k_2018),
+    desc(occ_n2k_2018),
     desc(aoo_n2k_2017),
     desc(occ_n2k_2017),
     desc(aoo_n2k_2016),
     desc(occ_n2k_2016),
-    desc(aoo_n2k_2015),
-    desc(occ_n2k_2015),
+    desc(aoo_2018),
+    desc(occ_2018),
     desc(aoo_2017),
     desc(occ_2017),
     desc(aoo_2016),
     desc(occ_2016),
-    desc(aoo_2015),
-    desc(occ_2015),
+    desc(mean_lcl),
     taxonKey) %>%
   select(taxonKey, spn,
+         mean_lcl,
+         aoo_n2k_2018, occ_n2k_2018,
          aoo_n2k_2017, occ_n2k_2017,
          aoo_n2k_2016, occ_n2k_2016,
-         aoo_n2k_2015, occ_n2k_2015,
+         aoo_2018, occ_2018,
          aoo_2017, occ_2017,
-         aoo_2016, occ_2016,
-         aoo_2015, occ_2015)
-
+         aoo_2016, occ_2016)
 
 ranking_df
 
 saveRDS(ranking_df, file = "./output/ranking_df.RDS")
 write.csv(ranking_df, file = "./output/ranking_df.csv")
 
-## Decide the emerging status based on the multiple methods
+## Generate plots based on "aoo_n2k" (result_indicator_df)
+df_plot <- df_pp %>%
+  left_join(result_indicator_df %>%
+              select(taxonKey, eyear, aoo_n2k),
+            by = c("taxonKey" = "taxonKey", "year" = "eyear")) %>%
+  rename(em = aoo_n2k)
 
+df_plot <- group_by(df_plot, taxonKey)
+taxl <- group_keys(df_plot) %>% pull()
 
-
-
-## Generate plots
-df_em <- df_pp %>%
-  left_join(em, by = c("taxonKey" = "taxonKey", "year" = "eyear"))
-
-plot_em <- df_em %>%
+plot_em <- df_plot %>%
   group_split() %>%
-  map(plot_incr_em, saveplot = TRUE) %>%
+  map(plot_incr_em, saveplot = FALSE) %>%
   set_names(taxl)
 
 saveRDS(plot_em, file = "./output/plot_em.RDS")
 
-
-## Summary statistics
-em %>%
-  mutate(emtot = as.numeric(emtot)) %>%
-  group_by(emtot, eyear) %>%
-  summarise(em_nb = n()) %>%
-  group_by(eyear) %>%
-  spread(key = eyear, value = em_nb) %>%
-  arrange(emtot)
-
-
-
-df_s %>%
-  filter(taxonKey == "3189866" & year == "2017") %>%
-  left_join(df_xy, by = "eea_cell_code") %>%
-  ggplot(aes(x =x, y = y)) + geom_point()

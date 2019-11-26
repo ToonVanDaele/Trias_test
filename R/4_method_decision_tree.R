@@ -18,13 +18,13 @@ spDT <- function(df, nbyear = 3){
   spec <- df[[1,1]]     # species name
   spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn) %>% as.character()
   maxyear <- max(df$year)
-  ptitle <- paste0("/dt/", spec, "_", spn, "_DT_", maxyear)
+  ptitle <- paste0("/dt/", spec, "_", spn, "_DT")
   cat(ptitle, "\n")
 
   # Decision rules
-  df_em <- map_dfr(c(1:nbyear), function(eyear){
-    df2 <- filter(df, year <= maxyear - eyear + 1)
-    df_out <- spDT_base(df = df2, spec = spec)
+  df_em <- map_dfr(c(maxyear:(maxyear - nbyear + 1)), function(eyear){
+    df2 <- filter(df, year <= eyear)
+    df_out <- spDT_base(df = df2, spec = spec, eyear = eyear)
     return(df_out)
   })
 
@@ -38,57 +38,62 @@ spDT <- function(df, nbyear = 3){
 }
 
 
-spDT_base <- function(df, spec){
+spDT_base <- function(df, spec, eyear){
 
-  lyear <- max(df$year) # last year
-  nb <- nrow(df)        # length of time series
+  out_em <- NA
+  if (!nrow(df) == 0){  # if there are no records. The emergence status should be 0
 
-  dt <- rep(FALSE, 8)  # Vector to store results of tests (default = FALSE)
+    lyear <- max(df$year) # last year
+    nb <- nrow(df)        # length of time series
 
-  # DT_1: Time series with only one value?   -> appearing species  (always > 0)
-  if (nb == 1) dt[1] <- TRUE
+    dt <- rep(FALSE, 8)  # Vector to store results of tests (default = FALSE)
 
-  # DT_2: 50% of time series > 0?
-  if (sum(df$ncell > 0) / nb >= 0.5) dt[2] <- TRUE
+    # DT_1: Time series with only one value?   -> appearing species  (always > 0)
+    if (nb == 1) dt[1] <- TRUE
 
-  # DT_3: last value above median value -> possibly emerging ("2")
-  if (df$ncell[nb] > median(df$ncell)) dt[3] <- TRUE
+    # DT_2: 50% of time series > 0?
+    if (sum(df$ncell > 0) / nb >= 0.5) dt[2] <- TRUE
 
-  # DT_4: 0 since 5 years -> not emerging
-  if (sum(df$ncell[max(nb - 4, 0):nb]) == 0) dt[4] <- TRUE
+    # DT_3: last value above median value -> possibly emerging ("2")
+    if (df$ncell[nb] > median(df$ncell)) dt[3] <- TRUE
 
-  # DT_5: > 0 and 5 consecutive years 0 before  -> (re)appearing
-  if (nb > 1 && df$ncell[nb] > 0 & sum(df$ncell[max(nb - 5, 0):(nb - 1)]) == 0) dt[5] <- TRUE
+    # DT_4: 0 since 5 years -> not emerging
+    if (sum(df$ncell[max(nb - 4, 0):nb]) == 0) dt[4] <- TRUE
 
-  # DT_6: Maximum of ncell == 1
-  if (max(df$ncell) <= 1) dt[6] <- TRUE
+    # DT_5: > 0 and 5 consecutive years 0 before  -> (re)appearing
+    if (nb > 1 && df$ncell[nb] > 0 & sum(df$ncell[max(nb - 5, 0):(nb - 1)]) == 0) dt[5] <- TRUE
 
-  # DT_7: Increase? Last value > before last value
-  if (nb > 1 && df$ncell[nb] > df$ncell[nb - 1]) dt[7] <- TRUE
+    # DT_6: Maximum of ncell == 1
+    if (max(df$ncell) <= 1) dt[6] <- TRUE
 
-  # DT_8: Maximum ever observed?
-  if (df$ncell[nb] > max(df$ncell)) dt[8] <- TRUE
+    # DT_7: Increase? Last value > before last value
+    if (nb > 1 && df$ncell[nb] > df$ncell[nb - 1]) dt[7] <- TRUE
 
-  #em status codes:
-  # 0 = not emerging
-  # 1 = unclear
-  # 2 = potentially emerging
-  # 3 = emerging
-  # 4 = appearing / re-appearing
+    # DT_8: Maximum ever observed?
+    if (df$ncell[nb] > max(df$ncell)) dt[8] <- TRUE
 
-  em <- case_when(
-    dt[4] == TRUE ~ 0,                  # zeros since > 5 years => not emerging
-    dt[1] == TRUE ~ 1,                  # One value > 1 => appearing / re-appearing
-    dt[5] == TRUE ~ 1,                  # > 0 after 5 consecutive 0 => re-appearing
-    dt[6] == TRUE & dt[2] == TRUE ~ 1,  # appearing / re-appearing
-    dt[7] == TRUE & dt[8] == FALSE ~ 2, # Last year increase but not maximum => potentially emerging
-    dt[3] == TRUE ~ 2,                  # potentially emerging
-    dt[8] == TRUE & dt[1] == FALSE ~ 3  # maximum ever observerd => emerging
-  )
+    #em status codes:
+    # 0 = not emerging
+    # 1 = unclear
+    # 2 = potentially emerging
+    # 3 = emerging
+    # 4 = appearing / re-appearing
 
-  if (is.na(em)) em <- 0
+    out_em <- case_when(
+      dt[4] == TRUE ~ 0,                  # zeros since > 5 years => not emerging
+      dt[1] == TRUE ~ 1,                  # One value > 1 => appearing / re-appearing
+      dt[5] == TRUE ~ 1,                  # > 0 after 5 consecutive 0 => re-appearing
+      dt[6] == TRUE & dt[2] == TRUE ~ 1,  # appearing / re-appearing
+      dt[7] == TRUE & dt[8] == FALSE ~ 2, # Last year increase but not maximum => potentially emerging
+      dt[3] == TRUE ~ 2,                  # potentially emerging
+      dt[8] == TRUE & dt[1] == FALSE ~ 3  # maximum ever observerd => emerging
+    )
+  }
 
-  return(df_em <- tibble(taxonKey = spec, eyear = lyear,  method_em = "DT", em = em))
+  if (is.na(out_em)) out_em <- 0
+
+  df_em <- tibble(taxonKey = spec, eyear = eyear,  method_em = "DT", em = out_em)
+  return(df_em)
 }
 
 

@@ -109,9 +109,9 @@ plot_incr_em <- function(df, ptitle = NULL,
 
   spec <- df[[1,"taxonKey"]]
   lyear <- max(df$year)
-  if (is.null(ptitle)) {ptitle <- paste0(spec, "_", lyear)}
+  if (is.null(ptitle)) ptitle <- paste0(spec, "_", lyear)
 
-  g <- ggplot(df, aes(x = year, y = obs, colour = emtot)) +
+  g <- ggplot(df, aes(x = year, y = obs, colour = as.factor(em))) +
     geom_line(colour = "grey") +
     geom_point() +
     scale_colour_manual(values = c("4" = "dark red", "3" = "red", "2" = "orangered", "1" = "orange",
