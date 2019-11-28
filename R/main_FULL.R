@@ -71,6 +71,7 @@ df_ts <- read_tsv(file = "./data/df_timeseries.tsv")
 
 ## Selection of species for testing
 #df_ts <- filter(df_ts, taxonKey %in% unique(df_ts$taxonKey)[1:20])
+#df_ts <- filter(df_ts, taxonKey == "5358907")
 
 # Filter some species - problem with taxonKey
 df_ts <- filter(df_ts, !taxonKey %in% c("10173593", "10172912", "10661581"))

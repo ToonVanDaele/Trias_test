@@ -39,19 +39,14 @@ spGAM_pa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE)
               family = "binomial",
               data = df, method = "REML")
 
-    #draw(g1)
     df_n <- df
     temp <- predict(object = g1, newdata = df_n, type = "iterms", interval = "prediction",
                     se.fit = TRUE)
 
-    # Calculate confidence intervals in link scale and backtransform to real scale
-    intercept <- unname(g1$coefficients[1])
-    df_n$fit <- exp(temp$fit[,1] + intercept)
-    df_n$ucl <- exp(temp$fit[,1] + intercept + temp$se.fit[,1] * 1.96)
-    df_n$lcl <- exp(temp$fit[,1] + intercept - temp$se.fit[,1] * 1.96)
+    # Predict in real scale
+    df_n <- predict_real_scale(df, g1)
 
     # Create plot with conf. interval + colour for shape status
-
     g <- df_n %>%
       group_by(year) %>%
       summarise(yobs = sum(pa_obs),
@@ -65,16 +60,14 @@ spGAM_pa <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FALSE)
                   alpha = 0.4) +
       ggtitle(paste("gam_pa", ptitle))
 
-
     # Calculate first and second derivative + conf. interval
     df_new <- data.frame(year = seq(fyear, lyear), cobs = 0, x = 0, y = 0)
 
-    deriv1 <- derivatives(g1, term = "year", type = "central", newdata = df_new,
-                          order = 1, level = 0.8, n = nrow(df_new), eps = 1e-4)
-
-    deriv2 <- derivatives(g1, term = "year", type = "central", newdata = df_new,
-                          order = 2, level = 0.8, n = nrow(df_new), eps = 1e-4)
-    #draw(deriv1) #draw(deriv2)
+    # Calculate first and second derivative + conf. interval
+    deriv1 <- derivatives(g1, term = "s(year)", type = "central", order = 1,
+                          level = 0.8, n = nrow(df_n), eps = 1e-4)
+    deriv2 <- derivatives(g1, term = "s(year)", type = "central", order = 2,
+                          level = 0.8, n = nrow(df_n), eps = 1e-4)
 
     # Emerging status based on first and second derivative
     em_level_gam <- em_level(deriv1, deriv2)
@@ -157,12 +150,11 @@ spGAM_pa_ns <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FAL
     # Calculate first and second derivative + conf. interval
     df_new <- data.frame(year = seq(fyear, lyear), cobs = 0, x = 0, y = 0)
 
-    deriv1 <- derivatives(g1, term = "year", type = "central", newdata = df_new,
-                          order = 1, level = 0.8, n = nrow(df_new), eps = 1e-4)
-
-    deriv2 <- derivatives(g1, term = "year", type = "central", newdata = df_new,
-                          order = 2, level = 0.8, n = nrow(df_new), eps = 1e-4)
-    #draw(deriv1) #draw(deriv2)
+    # Calculate first and second derivative + conf. interval
+    deriv1 <- derivatives(g1, term = "s(year)", type = "central", order = 1,
+                          level = 0.8, n = nrow(df_n), eps = 1e-4)
+    deriv2 <- derivatives(g1, term = "s(year)", type = "central", order = 2,
+                          level = 0.8, n = nrow(df_n), eps = 1e-4)
 
     # Emerging status based on first and second derivative
     em_level_gam <- em_level(deriv1, deriv2)
@@ -172,7 +164,6 @@ spGAM_pa_ns <- function(df, printplot = FALSE, saveplot = FALSE, savemodel = FAL
 
     # Mean lower confidence limit of the last three years from the first derivative
     mlcl_y3 <- get_lcl_y3(deriv1)
-
 
     # p-waarde van de smoother te groot -> output NA toevoegen
 

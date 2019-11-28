@@ -129,13 +129,14 @@ get_em <- function(method_name, path){
 
 # Calculate the mean lower confidence level of the first derivative of the
 # last three years
-get_lcl <- function(df_deriv, nbyear){
+get_lcl <- function(df_deriv, nbyear, fam){
 
   lcl <- df_deriv %>%
     filter(var == "year") %>%
     filter(data > max(data) - nbyear + 1) %>%
     select(year = data, lcl = lower) %>%
-    mutate(year = round(year, 0))
+    mutate(year = round(year, 0),
+           lcl = fam$linkinv(lcl))
 
   return(lcl)
 }
@@ -158,4 +159,19 @@ add_spec <- function(df_ts, spec_names){
     saveRDS(object = spec_names, file = "./data/spec_names.RDS")
   }
   return(spec_names)
+}
+
+# Apply predict and link inverse to real scale
+predict_real_scale <- function(df_n, model) {
+
+  temp <- predict(object = model, newdata = df_n, type = "iterms",
+                  interval = "prediction",
+                  se.fit = TRUE)
+
+  intercept <- unname(model$coefficients[1])
+  df_n$fit <- model$family$linkinv(temp$fit[,1] + intercept)
+  df_n$ucl <- model$family$linkinv(temp$fit[,1] + intercept + temp$se.fit[,1] * 1.96)
+  df_n$lcl <- model$family$linkinv(temp$fit[,1] + intercept - temp$se.fit[,1] * 1.96)
+
+  return(df_n)
 }
