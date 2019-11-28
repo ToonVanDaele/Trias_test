@@ -175,3 +175,26 @@ predict_real_scale <- function(df_n, model) {
 
   return(df_n)
 }
+
+
+# Temporary workaround upscaling to 5x5km cells
+aggr_1to5 <- function(df){
+
+  df_s5 <- df %>%
+    left_join(df_xy %>%
+                select(eea_cell_code, x5, y5, cell_code5),
+              by = "eea_cell_code") %>%
+    filter(!is.na(cell_code5)) %>%
+    group_by(taxonKey, year, cell_code5) %>%
+    summarise(x = first(x5),
+              y = first(y5),
+              native_obs = sum(native_obs),
+              obs = sum(obs),
+              pa_native_obs = max(pa_native_obs),
+              pa_obs = max(pa_obs),
+              classKey = first(classKey),
+              n2k = sum(natura2000),
+              nb_1km = n()) %>%
+    mutate(natura2000 = ifelse(n2k / nb_1km >= 0.5, TRUE, FALSE)) %>%
+    select(-n2k, -nb_1km)
+}

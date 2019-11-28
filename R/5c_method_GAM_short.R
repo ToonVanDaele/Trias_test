@@ -166,7 +166,6 @@ spGAM_lpa <- function(df, method_em = "GAM_lpa", printplot = FALSE, nbyear = 3,
           left_join(df_lcl %>%
                       select(year, lcl), by = c("eyear" = "year"))
       }
-
     })
 
     if (class(result)[1] %in% c("simpleWarning", "simpleError", "try-error"))

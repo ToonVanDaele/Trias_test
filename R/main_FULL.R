@@ -1,6 +1,6 @@
 ### Main full analysis
 
-# This script does the full analysis
+# This full analysis (after 1_getdata.R)
 
 # Some overall parameters
 firstyear <- 1980
@@ -9,69 +9,17 @@ nbyear <- 3   # Number of last years to be evaluated
 
 # Load libraries & source function
 library(tidyverse)
-#source(file = "./R/2_preproces_data.R")
-#source(file = "./R/3_select_species.R")
 source(file = "./R/4_method_decision_tree.R")
-#source(file = "./R/5a_method_piecewise_regression.R")
-#source(file = "./R/5b_method_INLA_AR.R")
 source(file = "./R/5c_method_GAM_short.R")
 source(file = "./R/5d_method_GAM_pa.R")
 source(file = "./R/5e_method_GAM_count.R")
 source(file = "./R/9_function.R")
 source(file = "./R/9b_plot_function.R")
 
-## Load raw data
-# .RDS file are generated with 1_getdata.R
-# df_in <- readRDS(file = "./data/cube_belgium.RDS")
-# df_bl <- readRDS(file = "./data/cube_belgium_baseline.RDS")
+## Load data
+df_ts <- read_tsv(file = "./data/df_timeseries.tsv")
 spec_names <- readRDS(file = "./data/spec_names.RDS")
 df_xy <- readRDS(file = "./data/df_xy.RDS")
-
-####################################################################
-# 1. Preprocessing
-# spatial data frame - full
-# df_s <- preproc_s(df_in, df_bl, df_xy, spec_names,
-#                   firstyear = firstyear, lastyear = lastyear)
-# saveRDS(df_s, file = "./data/df_s.RDS")
-#
-# # spatial data frame - n2k only
-# df_s_n2k <- preproc_s_N2k(df_s)
-# saveRDS(df_s_n2k, file = "./data/df_s_n2k.RDS")
-#
-# # lumped data frame - full
-# df_pp <- preproc_pp(df_s)
-# saveRDS(df_pp, file = "./data/df_pp.RDS")
-#
-# # lumped data_frame - n2k only
-# df_pp_n2k <- preproc_pp(df_s_n2k)
-# saveRDS(df_pp_n2k, file = "./data/df_pp_n2k.RDS")
-#
-# # Aggregate spatial data frames to 5x5km cells (instead of 1x1km)
-# df_s5 <- aggr_1to5(df_s)
-# saveRDS(df_s5, file = "./data/df_s5.RDS")
-#
-# df_s5_n2k <- aggr_1to5(df_s_n2k)
-# saveRDS(df_s5_n2k, file = "./data/df_s5_n2k.RDS")
-#
-########################################################################
-# 2. modelling
-
-# Load data
-df_ts <- read_tsv(file = "./data/df_timeseries.tsv")
-
-## Load preprocessed data (if needed)
-#df_s <- readRDS(file = "./data/df_s.RDS")   # Don't load 1x1km
-#df_s_n2k <- readRDS(file = "./data/df_s_n2k.RDS")   # Don't load 1x1km
-
-# df_pp <- readRDS(file = "./data/df_pp.RDS")
-# df_pp_n2k <- readRDS(file = "./data/df_pp_n2k.RDS")
-#
-# df_s5 <- readRDS(file = "./data/df_s5.RDS")
-# df_s5_n2k <- readRDS(file = "./data/df_s5_n2k.RDS")
-
-## Selection of species for testing
-#df_ts <- filter(df_ts, taxonKey %in% unique(df_ts$taxonKey)[1:20])
-#df_ts <- filter(df_ts, taxonKey == "5358907")
 
 # Filter some species - problem with taxonKey
 df_ts <- filter(df_ts, !taxonKey %in% c("10173593", "10172912", "10661581"))
@@ -82,8 +30,13 @@ spec_names <- add_spec(df_ts, spec_names)
 # Filter last year
 df_ts <- filter(df_ts, year <= lastyear)
 
-## Create data set for natura2000
+# Selection of species for testing
+#df_ts <- filter(df_ts, taxonKey %in% unique(df_ts$taxonKey)[1:20])
 
+# Aggregate spatial data frames to 5x5km cells (instead of 1x1km)
+df_s5 <- aggr_1to5(df_ts)
+
+## Create data set for natura2000
 # Identify for each species the first year with an observation
 df_begin_n2k <- df_ts %>%
   filter(natura2000 == TRUE & obs > 0) %>%
@@ -94,7 +47,9 @@ df_ts_n2k <- df_ts %>%
   filter(natura2000 == TRUE) %>%
   left_join(df_begin_n2k, by = "taxonKey") %>%
   filter(year >= begin_year) %>%
-  select(-begin_year, -natura2000)
+  select(-begin_year)
+
+df_s5_n2k <- aggr_1to5(df_ts_n2k)
 
 # Data sets for the lumped data
 df_pp <- df_ts %>%
@@ -113,8 +68,9 @@ df_pp_n2k <- df_ts_n2k %>%
             ncobs = sum(pa_native_obs)) %>%
   ungroup()
 
-## Apply each method on all species
-
+########################################################################
+# 2. modelling
+#
 # All locations
 
 #apply_method(df_s, "spGAM_count")    # GAM occurences + cobs + s(x,y)  5x5km
@@ -148,6 +104,7 @@ apply_method(df_pp_n2k, "spGAM_lpa", n2k = TRUE)    # GAM occupancy on lumped da
 
 apply_method(df_pp_n2k, "spDT", n2k = TRUE)   # Decision tree (no statistics) n2k
 
+#######################################################################""
 # 3. Process output
 
 # full data
@@ -177,9 +134,6 @@ result_n2k$method_em <- paste0(result_n2k$method_em, "_n2k")
 df_em <- rbind(result_full, result_n2k) %>%
   select(-lcl) %>%
   spread(key = method_em, value = em)
-
-# em <- rbind(emDT, emGAM_lcount, emGAM_count_ns, emGAM_lpa, emGAM_pa_ns) %>%
-#   spread(key = method_em, value = em)
 
 spec_names$taxonKey <- as.numeric(spec_names$taxonKey)
 
@@ -307,7 +261,7 @@ taxl <- group_keys(df_plot) %>% pull()
 
 plot_em <- df_plot %>%
   group_split() %>%
-  map(plot_incr_em, saveplot = FALSE) %>%
+  map(plot_incr_em, saveplot = TRUE) %>%
   set_names(taxl)
 
 saveRDS(plot_em, file = "./output/plot_em.RDS")
