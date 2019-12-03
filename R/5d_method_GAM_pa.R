@@ -37,7 +37,7 @@ spGAM_pa <- function(df, method_em = "GAM_pa",
 
   maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade, min 4
 
-  result <- try({
+  result <- tryCatch(expr = {
     g1 <- gam(formula = fm, family = "binomial", data = df, method = "REML")
 
     # Check at p-value of least 1 smoother < 0.1
@@ -85,7 +85,7 @@ spGAM_pa <- function(df, method_em = "GAM_pa",
         left_join(df_lcl %>%
                     select(year, lcl), by = c("eyear" = "year"))
     }
-  })
+  }, error = function(e) e, warning = function(w) w)
 
   if (class(result)[1] %in% c("simpleWarning", "simpleError", "try-error"))
     err_result <- result

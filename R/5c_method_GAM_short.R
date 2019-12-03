@@ -26,20 +26,24 @@ spGAM_lcount <- function(df, method_em = "GAM_lcount", nbyear = 3,
   print(paste0(spec, "_", spn))
 
   fm <- formula(obs ~ s(year, k = maxk, m = 3, bs = "tp"))
-  if (method_em == "GAM_lcount_cobs") fm <- update(fm, ~. + s(cobs))
+  maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade
+  mindct <- ifelse(n_distinct(df$obs) >= maxk, TRUE, FALSE)
+
+  if (method_em == "GAM_lcount_cobs") {
+    fm <- update(fm, ~. + s(cobs, k = 4))
+    mindct <- ifelse(mindct == TRUE && n_distinct(df$cobs) >= 4, TRUE, FALSE)
+  }
 
   # assign NULL values in case something goes wrong later
-  g1 <- df_n <- g <- em_level_gam <- NULL
-  deriv1 <- deriv2 <- err_result <- NULL
+  g1 <- df_n <- g <- em_level_gam <- deriv1 <- deriv2 <- err_result <- NULL
   df_em <- data.frame(taxonKey = spec, eyear = (lyear - nbyear + 1):lyear,
                       method_em = method_em, em = NA, lcl = NA,
                       stringsAsFactors = FALSE)
 
-  if ((lyear - fyear) > 3 & sum(df$obs[2:nrow(df)]) != 0) {
+  if (mindct) {
 
-    result <- try({
+    result <- tryCatch(expr = {
 
-      maxk <- max(round((lyear - fyear) / 10, 0), 5)  # 1 knot per decade
       g1 <- gam(formula = fm,
                 family = nb(),
                 data = df, method = "REML")
@@ -77,7 +81,7 @@ spGAM_lcount <- function(df, method_em = "GAM_lcount", nbyear = 3,
         g <- plot_ribbon_em(df_n = df_n, y_axis = "obs", df = df, ptitle = ptitle,
                             printplot = printplot, saveplot = saveplot)
       }
-    })
+    }, error = function(e) e, warning = function(w) w)
 
     if (class(result)[1] %in% c("simpleWarning", "simpleError", "try-error"))
       err_result <- result
@@ -86,6 +90,7 @@ spGAM_lcount <- function(df, method_em = "GAM_lcount", nbyear = 3,
     err_result <- "Insufficient data"
   }
 
+  print(err_result)
   if (savemodel == FALSE) g1 <- NULL
   return(list(df_em = df_em, model = g1, df_n = df_n, em_level_gam = em_level_gam,
               deriv1 = deriv1, deriv2 = deriv2, plot = g, result = err_result))
@@ -115,20 +120,24 @@ spGAM_lpa <- function(df, method_em = "GAM_lpa", printplot = FALSE, nbyear = 3,
   spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn) %>% as.character()
   print(paste0(spec, "_", spn))
 
-  fm <- formula(obs ~ s(year, k = maxk, m = 3, bs = "tp"))
-  if (method_em == "GAM_lpa_cobs") fm <- update(fm, ~. + s(cobs))
+  maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade
+  mindct <- ifelse(n_distinct(df$obs) >= maxk, TRUE, FALSE)
 
-  g1 <- df_n <- g <- em_level_gam <- NULL
-  deriv1 <- deriv2 <- err_result <- NULL
+  fm <- formula(obs ~ s(year, k = maxk, m = 3, bs = "tp"))
+  if (method_em == "GAM_lpa_cobs") {
+    fm <- update(fm, ~. + s(cobs))
+    mindct <- ifelse(mindct == TRUE && n_distinct(df$cobs) >= 4, TRUE, FALSE)
+  }
+
+  g1 <- df_n <- g <- em_level_gam <- deriv1 <- deriv2 <- err_result <- NULL
   df_em <- data.frame(taxonKey = spec, eyear = (lyear - nbyear + 1):lyear,
                       method_em = method_em, em = NA, lcl = NA,
                       stringsAsFactors = FALSE)
 
-  if (nrow(df) > 3 & sum(df$obs[2:nrow(df)]) != 0) {
+  if (mindct) {
 
-    result <- try({
+    result <- tryCatch(expr = {
 
-      maxk <- max(round((lyear - fyear) / 10, 0), 5)  # 1 knot per decade
       g1 <- gam(formula = fm,
                 family = nb(),
                 data = df, method = "REML")
@@ -166,15 +175,17 @@ spGAM_lpa <- function(df, method_em = "GAM_lpa", printplot = FALSE, nbyear = 3,
           left_join(df_lcl %>%
                       select(year, lcl), by = c("eyear" = "year"))
       }
-    })
+    }, error = function(e) e, warning = function(w) w)
 
-    if (class(result)[1] %in% c("simpleWarning", "simpleError", "try-error"))
+    if (class(result)[1] %in% c("simpleWarning", "simpleError", "try-error")){
       err_result <- result
+    }
 
   }else{
     err_result <- "Insufficient data"
   }
 
+  print(err_result)
   if (savemodel == FALSE) g1 <- NULL
   return(list(df_em = df_em, model = g1, df_n = df_n, em_level_gam = em_level_gam,
               deriv1 = deriv1, deriv2 = deriv2, plot = g, result = err_result))

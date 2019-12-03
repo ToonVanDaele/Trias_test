@@ -28,7 +28,7 @@ spGAM_count <- function(df, method_em = "GAM_count",
 
   maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade, min 4
 
-  result <- try({
+  result <- tryCatch(expr = {
 
     g1 <- gam(formula = fm, family = nb(), data = df, method = "REML")
 
@@ -74,7 +74,7 @@ spGAM_count <- function(df, method_em = "GAM_count",
 
       out <- em_gam2em(em_level_gam) # get emerging status of the last year
     }
-  })
+  }, error = function(e) e, warning = function(w) w)
 
   if (class(result)[1] %in% c("simpleWarning", "simpleError", "try-error"))
     err_result <- result
