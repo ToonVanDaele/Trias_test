@@ -123,10 +123,10 @@ spGAM_lpa <- function(df, method_em = "GAM_lpa", printplot = FALSE, nbyear = 3,
   maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade
   mindct <- ifelse(n_distinct(df$obs) >= maxk, TRUE, FALSE)
 
-  fm <- formula(obs ~ s(year, k = maxk, m = 3, bs = "tp"))
+  fm <- formula(ncell ~ s(year, k = maxk, m = 3, bs = "tp"))
   if (method_em == "GAM_lpa_cobs") {
-    fm <- update(fm, ~. + s(cobs))
-    mindct <- ifelse(mindct == TRUE && n_distinct(df$cobs) >= 4, TRUE, FALSE)
+    fm <- update(fm, ~. + s(ncobs))
+    mindct <- ifelse(mindct == TRUE && n_distinct(df$ncobs) >= 4, TRUE, FALSE)
   }
 
   g1 <- df_n <- g <- em_level_gam <- deriv1 <- deriv2 <- err_result <- NULL
@@ -165,7 +165,7 @@ spGAM_lpa <- function(df, method_em = "GAM_lpa", printplot = FALSE, nbyear = 3,
 
         # Create plot with conf. interval + colour for status
         ptitle <- paste0(method_em,"/", spec, "_", spn, "_", lyear)
-        g <- plot_ribbon_em(df_n = df_n, y_axis = "obs", df = df, ptitle = ptitle,
+        g <- plot_ribbon_em(df_n = df_n, y_axis = "ncell", df = df, ptitle = ptitle,
                             printplot = printplot, saveplot = saveplot)
 
         out <- em_gam2em(em_level_gam, nbyear) # get emerging status
