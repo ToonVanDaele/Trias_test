@@ -162,20 +162,41 @@ add_spec <- function(df_ts, spec_names){
 }
 
 # Apply predict and link inverse to real scale
-predict_real_scale <- function(df_n, model) {
+predict_real_scale <- function(df_pred, model) {
 
-  temp <- predict(object = model, newdata = df_n, type = "iterms",
+  temp <- predict(object = model, newdata = df_pred, type = "iterms",
                   interval = "prediction",
                   se.fit = TRUE)
 
   intercept <- unname(model$coefficients[1])
-  df_n$fit <- model$family$linkinv(temp$fit[,1] + intercept)
-  df_n$ucl <- model$family$linkinv(temp$fit[,1] + intercept + temp$se.fit[,1] * 1.96)
-  df_n$lcl <- model$family$linkinv(temp$fit[,1] + intercept - temp$se.fit[,1] * 1.96)
+  df_pred$fit <- model$family$linkinv(temp$fit[,1] + intercept)
+  df_pred$ucl <- model$family$linkinv(temp$fit[,1] + intercept + temp$se.fit[,1] * 1.96)
+  df_pred$lcl <- model$family$linkinv(temp$fit[,1] + intercept - temp$se.fit[,1] * 1.96)
 
-  return(df_n)
+  return(df_pred)
 }
 
+predict_real_scale2 <- function(df_pred, model) {
+
+  temp <- predict(object = model, newdata = df_pred, type = "response",
+                  interval = "prediction",
+                  se.fit = TRUE)
+
+  df_pred$fit <- temp$fit
+  df_pred$ucl <- temp$fit + temp$se.fit * 1.96
+  df_pred$lcl <- temp$fit - temp$se.fit * 1.96
+
+  return(df_pred)
+}
+
+# Deriv real scale
+deriv_to_real <- function(df_deriv, model){
+
+  df_temp <- data.frame(fit = model$family$linkinv(df_deriv$derivative),
+                        ucl = model$family$linkinv(df_deriv$derivative + df_deriv$se * 1.96),
+                        lcl = model$family$linkinv(df_deriv$derivative - df_deriv$se * 1.96))
+
+}
 
 # Temporary workaround upscaling to 5x5km cells
 aggr_1to5 <- function(df){

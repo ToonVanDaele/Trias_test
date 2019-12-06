@@ -26,6 +26,11 @@ spGAM_count <- function(df, method_em = "GAM_count",
   if (method_em == "GAM_count")
     fm <- update(fm, ~. + s(x, y, bs = "gp", k = 100, m = c(3, 10)))
 
+  g1 <- df_n <- g <- em_level_gam <- deriv1 <- deriv2 <- err_result <- aic <- NULL
+  df_em <- data.frame(taxonKey = spec, eyear = (lyear - nbyear + 1):lyear,
+                      method_em = method_em, em = NA, lcl = NA,
+                      stringsAsFactors = FALSE)
+
   maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade, min 4
 
   result <- tryCatch(expr = {
@@ -39,6 +44,27 @@ spGAM_count <- function(df, method_em = "GAM_count",
     if (p_ok) {
       # Predict in real scale
       df_n <- predict_real_scale(df, g1)
+
+      # Calculate first and second derivative + conf. interval
+      df_new <- data.frame(year = seq(fyear, lyear), cobs = 0, x = 0, y = 0)
+
+      # Calculate first and second derivative + conf. interval
+      deriv1 <- derivatives(g1, term = "s(year)", type = "central", order = 1,
+                            level = 0.8, n = nrow(df_n), eps = 1e-4)
+      deriv2 <- derivatives(g1, term = "s(year)", type = "central", order = 2,
+                            level = 0.8, n = nrow(df_n), eps = 1e-4)
+
+      # Emerging status based on first and second derivative
+      em_level_gam <- em_level(filter(deriv1, smooth == "s(year)"),
+                               filter(deriv2, smooth == "s(year)"))
+      df_new <- bind_cols(df_new, em_level_gam)
+
+      out <- em_gam2em(em_level_gam) # get emerging status of the last year
+
+      # Mean lower confidence limit from the first derivative
+      df_lcl <- get_lcl(df_deriv = deriv1, nbyear = nbyear, fam = g1$family)
+
+      aic <- g1$aic
 
       # Create plot with conf. interval + colour for shape status
       g <- df_n %>%
@@ -54,25 +80,6 @@ spGAM_count <- function(df, method_em = "GAM_count",
                     alpha = 0.4) +
         ggtitle(ptitle)
 
-      # Calculate first and second derivative + conf. interval
-
-      df_new <- data.frame(year = seq(fyear, lyear), cobs = 0, x = 0, y = 0)
-
-      # Calculate first and second derivative + conf. interval
-      deriv1 <- derivatives(g1, term = "s(year)", type = "central", order = 1,
-                            level = 0.8, n = nrow(df_n), eps = 1e-4)
-      deriv2 <- derivatives(g1, term = "s(year)", type = "central", order = 2,
-                            level = 0.8, n = nrow(df_n), eps = 1e-4)
-
-      # Emerging status based on first and second derivative
-      em_level_gam <- em_level(filter(deriv1, smooth == "s(year)"),
-                               filter(deriv2, smooth == "s(year)"))
-      df_new <- bind_cols(df_new, em_level_gam)
-
-      # Mean lower confidence limit from the first derivative
-      df_lcl <- get_lcl(df_deriv = deriv1, nbyear = nbyear, fam = g1$family)
-
-      out <- em_gam2em(em_level_gam) # get emerging status of the last year
     }
   }, error = function(e) e, warning = function(w) w)
 
@@ -84,7 +91,8 @@ spGAM_count <- function(df, method_em = "GAM_count",
 
   if (savemodel == FALSE) g1 <- NULL
   return(list(em = df_em, model = g1, em_level_gam = em_level_gam,
-              deriv1 = deriv1, deriv2 = deriv2, plot = g, result = result))
+              deriv1 = deriv1, deriv2 = deriv2, plot = g, result = result,
+              aic = aic))
 }
 
 

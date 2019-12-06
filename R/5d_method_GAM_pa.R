@@ -29,8 +29,7 @@ spGAM_pa <- function(df, method_em = "GAM_pa",
   if (method_em == "GAM_pa")
     fm <- update(fm, ~. + s(x, y, bs = "gp", k = 100, m = c(3, 10)))
 
-  g1 <- df_n <- g <- em_level_gam <- NULL
-  deriv1 <- deriv2 <- err_result <- NULL
+  g1 <- df_n <- g <- em_level_gam <- deriv1 <- deriv2 <- err_result <- aic <- NULL
   df_em <- data.frame(taxonKey = spec, eyear = (lyear - nbyear + 1):lyear,
                       method_em = method_em, em = NA, lcl = NA,
                       stringsAsFactors = FALSE)
@@ -66,6 +65,8 @@ spGAM_pa <- function(df, method_em = "GAM_pa",
       # Mean lower confidence limit of the last three years from the first derivative
       df_lcl <- get_lcl(df_deriv = deriv1, nbyear = nbyear, fam = g1$family)
 
+      aic <- g1$aic
+
       # Create plot with conf. interval + colour for shape status
       g <- df_n %>%
         group_by(year) %>%
@@ -94,7 +95,7 @@ spGAM_pa <- function(df, method_em = "GAM_pa",
   if (savemodel == FALSE) g1 <- NULL
   return(list(em = df_em, model = g1, em_level_gam = em_level_gam,
               deriv1 = deriv1, deriv2 = deriv2, plot = g, result = result,
-              time = list(start, end)))
+              aic = aic, time = list(start, end)))
 }
 
 

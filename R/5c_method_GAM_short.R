@@ -27,7 +27,7 @@ spGAM_lcount <- function(df, method_em = "GAM_lcount", nbyear = 3,
 
   fm <- formula(obs ~ s(year, k = maxk, m = 3, bs = "tp"))
   maxk <- max(round((lyear - fyear) / 10, 0), 4)  # 1 knot per decade
-  mindct <- ifelse(n_distinct(df$obs) >= maxk, TRUE, FALSE)
+  mindct <- ifelse(n_distinct(df$obs) >= maxk, TRUE, FALSE) # check distinct values
 
   if (method_em == "GAM_lcount_cobs") {
     fm <- update(fm, ~. + s(cobs, k = 4))
@@ -35,7 +35,7 @@ spGAM_lcount <- function(df, method_em = "GAM_lcount", nbyear = 3,
   }
 
   # assign NULL values in case something goes wrong later
-  g1 <- df_n <- g <- em_level_gam <- deriv1 <- deriv2 <- err_result <- NULL
+  g1 <- df_n <- g <- em_level_gam <- deriv1 <- deriv2 <- err_result <- aic <- NULL
   df_em <- data.frame(taxonKey = spec, eyear = (lyear - nbyear + 1):lyear,
                       method_em = method_em, em = NA, lcl = NA,
                       stringsAsFactors = FALSE)
@@ -49,8 +49,7 @@ spGAM_lcount <- function(df, method_em = "GAM_lcount", nbyear = 3,
                 data = df, method = "REML")
 
       # Check at p-value of least 1 smoother < 0.1
-      s_pv <- summary.gam(g1)$s.pv
-      p_ok <- ifelse(any(s_pv < 0.1), TRUE, FALSE)
+      p_ok <- ifelse(any(summary.gam(g1)$s.pv < 0.1), TRUE, FALSE)
 
       if (p_ok){
         # Predict in real scale
@@ -76,6 +75,7 @@ spGAM_lcount <- function(df, method_em = "GAM_lcount", nbyear = 3,
           left_join(df_lcl %>%
                       select(year, lcl), by = c("eyear" = "year"))
 
+        aic <- g1$aic
         # Create plot with conf. interval + colour for status
         ptitle <- paste0(method_em,"/", spec, "_", spn)
         g <- plot_ribbon_em(df_n = df_n, y_axis = "obs", df = df, ptitle = ptitle,
@@ -93,7 +93,8 @@ spGAM_lcount <- function(df, method_em = "GAM_lcount", nbyear = 3,
   print(err_result)
   if (savemodel == FALSE) g1 <- NULL
   return(list(df_em = df_em, model = g1, df_n = df_n, em_level_gam = em_level_gam,
-              deriv1 = deriv1, deriv2 = deriv2, plot = g, result = err_result))
+              deriv1 = deriv1, deriv2 = deriv2, plot = g, result = err_result,
+              aic = aic))
 }
 
 
@@ -129,7 +130,7 @@ spGAM_lpa <- function(df, method_em = "GAM_lpa", printplot = FALSE, nbyear = 3,
     mindct <- ifelse(mindct == TRUE && n_distinct(df$ncobs) >= 4, TRUE, FALSE)
   }
 
-  g1 <- df_n <- g <- em_level_gam <- deriv1 <- deriv2 <- err_result <- NULL
+  g1 <- df_n <- g <- em_level_gam <- deriv1 <- deriv2 <- err_result <- aic <- NULL
   df_em <- data.frame(taxonKey = spec, eyear = (lyear - nbyear + 1):lyear,
                       method_em = method_em, em = NA, lcl = NA,
                       stringsAsFactors = FALSE)
@@ -163,6 +164,7 @@ spGAM_lpa <- function(df, method_em = "GAM_lpa", printplot = FALSE, nbyear = 3,
         # Mean lower confidence limit from the first derivative
         df_lcl <- get_lcl(df_deriv = deriv1, nbyear = nbyear, fam = g1$family)
 
+        aic <- g1$aic
         # Create plot with conf. interval + colour for status
         ptitle <- paste0(method_em,"/", spec, "_", spn, "_", lyear)
         g <- plot_ribbon_em(df_n = df_n, y_axis = "ncell", df = df, ptitle = ptitle,
@@ -188,7 +190,8 @@ spGAM_lpa <- function(df, method_em = "GAM_lpa", printplot = FALSE, nbyear = 3,
   print(err_result)
   if (savemodel == FALSE) g1 <- NULL
   return(list(df_em = df_em, model = g1, df_n = df_n, em_level_gam = em_level_gam,
-              deriv1 = deriv1, deriv2 = deriv2, plot = g, result = err_result))
+              deriv1 = deriv1, deriv2 = deriv2, plot = g, result = err_result,
+              aic = aic))
 }
 
 ## GAM presence / absence with native observations (cobs)
