@@ -68,22 +68,15 @@ plot_ribbon <- function(df_n, df, ptitle, printplot = FALSE, saveplot = FALSE){
 plot_ribbon_em <- function(df_n, df, y_axis = "obs", ptitle = NULL,
                            printplot = FALSE, saveplot = FALSE){
 
-  lyear <- max(df$year)
-  if (is.null(ptitle)) {
-    spec <- df[[1, "taxonKey"]]
-    ptitle <- paste0(spec, "_", lyear)
-  }
+  if (is.null(ptitle)) ptitle <- set_title(df_n)
 
   g <- ggplot(df_n, aes(x = year, y = fit)) +
-    geom_line(colour = "grey") +
-    geom_point(aes(colour = as.factor(em)), size = 2) +
+    geom_line(colour = "dark grey") +
+    geom_point(colour = "dark grey", size = 2) +
     geom_ribbon(aes(ymax = ucl, ymin = lcl),
                 fill = grey(0.5),
                 alpha = 0.4) +
     geom_point(data = df, aes(x = year, y = get(y_axis))) +
-    scale_colour_manual(values = c("4" = "dark red", "3" = "red", "2" = "orangered", "1" = "orange",
-                                   "0" = "grey50", "-1" = "light yellow",
-                                   "-2" = "yellow", "-3" = "green", "-4" = "dark green")) +
     ggtitle(ptitle)
 
   # color palette to be changed
@@ -127,35 +120,32 @@ plot_incr_em <- function(df, ptitle = NULL,
   return(g)
 }
 
-# Plot segmented regression
 
-plot_sr <- function(msm, df, printplot = FALSE){
+# Plot smoother s_year
+plot_smoother <- function(df, ptitle = NULL) {
 
-  spec <- df[1,"taxonKey"]  # Species name/code
-  #minyear <- min(df_sp$year)
-  lyear <- max(df$year)
-  mncells <- filter(df, year == lyear) %>% .$ncells
+  dir <- set_title(df)
+  if (is.null(ptitle)) ptitle <- paste0(dir, " smoother s_year")
 
-  g <- ggplot(df_sp, aes(x = year, y = ncells)) + geom_point()
+  df$em <- as.factor(df$em)
 
-  for (i in 1:(nrow(msm) - 1)) {
-    sgm_xb <- msm[i, 5]
-    sgm_xe <- msm[i + 1, 5]
-    sgm_yb <- msm[i, 4] + sgm_xb * msm[i,1]
-    sgm_ye <- sgm_yb + msm[i,1] * (sgm_xe - sgm_xb)
+  g <- ggplot(df, aes(x = year, y = s_year_fit)) +
+    geom_line(colour = "black") +
+    geom_point(aes(colour = em), size = 2) +
+    geom_ribbon(aes(ymax = s_year_ucl, ymin = s_year_lcl),
+                fill = grey(0.5),
+                alpha = 0.4) +
+    scale_colour_manual(values = c("4" = "dark red", "3" = "red", "2" = "orangered", "1" = "orange",
+                                   "0" = "grey50", "-1" = "light yellow",
+                                   "-2" = "yellow", "-3" = "green", "-4" = "dark green")) +
+    ggtitle(ptitle)
 
-    if (msm[i,2] > 0) {mycol = "red"}else{mycol = "green"}
-    xb <- sgm_xb #* attr(df_sp$year, 'scaled:scale') + attr(df_sp$year, 'scaled:center')
-    xe <- sgm_xe #* attr(df_sp$year, 'scaled:scale') + attr(df_sp$year, 'scaled:center')
-    g <- g + geom_segment(x = xb, y = exp(sgm_yb), xend = xe, yend = exp(sgm_ye), colour = mycol)
-  }
-
-  g <- g + ggtitle(paste0(spec, "_year: ", lyear, "_max_cells: ", mncells))
-
-  ggsave(filename = paste0("./output/figures/sr_", spec, "_", maxyear, ".png"), plot = g)
-  if (printplot == TRUE) plot(g)
-
+  return(g)
 }
+
+
+
+
 
 # Plot INLA RW2 time series
 

@@ -9,6 +9,7 @@ nbyear <- 3   # Number of last years to be evaluated
 
 # Load libraries & source function
 library(tidyverse)
+library(gridExtra)
 source(file = "./R/4_method_decision_tree.R")
 source(file = "./R/5c_method_GAM_short.R")
 source(file = "./R/5d_method_GAM_pa.R")
@@ -31,7 +32,7 @@ spec_names <- add_spec(df_ts, spec_names)
 df_ts <- filter(df_ts, year <= lastyear)
 
 # Selection of species for testing
-#df_ts <- filter(df_ts, taxonKey %in% unique(df_ts$taxonKey)[1:20])
+df_ts <- filter(df_ts, taxonKey %in% unique(df_ts$taxonKey)[1:30])
 
 # Aggregate spatial data frames to 5x5km cells (instead of 1x1km)
 df_s5 <- aggr_1to5(df_ts)
@@ -249,20 +250,31 @@ ranking_df
 saveRDS(ranking_df, file = "./output/ranking_df.RDS")
 write.csv(ranking_df, file = "./output/ranking_df.csv")
 
-## Generate plots based on "aoo_n2k" (result_indicator_df)
-df_plot <- df_pp %>%
-  left_join(result_indicator_df %>%
-              select(taxonKey, eyear, aoo_n2k),
-            by = c("taxonKey" = "taxonKey", "year" = "eyear")) %>%
-  rename(em = aoo_n2k)
 
-df_plot <- group_by(df_plot, taxonKey)
-taxl <- group_keys(df_plot) %>% pull()
+## Generate plots
+result <- readRDS("./output/result_spGAM_lcount_cobs.RDS")
 
-plot_em <- df_plot %>%
-  group_split() %>%
-  map(plot_incr_em, saveplot = TRUE) %>%
-  set_names(taxl)
+dir.create(paste0("./output/plots/"), showWarnings = FALSE)
 
-saveRDS(plot_em, file = "./output/plot_em.RDS")
+map(.x = result, .f = output_multiple_plots)
 
+
+
+
+# ## Generate plots based on "aoo_n2k" (result_indicator_df)
+# df_plot <- df_pp %>%
+#   left_join(result_indicator_df %>%
+#               select(taxonKey, eyear, aoo_n2k),
+#             by = c("taxonKey" = "taxonKey", "year" = "eyear")) %>%
+#   rename(em = aoo_n2k)
+#
+# df_plot <- group_by(df_plot, taxonKey)
+# taxl <- group_keys(df_plot) %>% pull()
+#
+# plot_em <- df_plot %>%
+#   group_split() %>%
+#   map(plot_incr_em, saveplot = TRUE) %>%
+#   set_names(taxl)
+#
+# saveRDS(plot_em, file = "./output/plot_em.RDS")
+#

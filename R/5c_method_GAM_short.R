@@ -63,7 +63,7 @@ spGAM_lcount <- function(df, method_em = "GAM_lcount", nbyear = 3,
 
         # Emerging status based on first and second derivative
         em_level_gam <- em_level(deriv1, deriv2)
-        df_n <- bind_cols(df_n, em_level_gam)
+        df_n <- df_n %>% left_join(em_level_gam, by = "year")
 
         # Mean lower confidence limit from the first derivative
         df_lcl <- get_lcl(df_deriv = deriv1, nbyear = nbyear, fam = g1$family)
@@ -76,10 +76,14 @@ spGAM_lcount <- function(df, method_em = "GAM_lcount", nbyear = 3,
                       select(year, lcl), by = c("eyear" = "year"))
 
         aic <- g1$aic
+
         # Create plot with conf. interval + colour for status
         ptitle <- paste0(method_em,"/", spec, "_", spn)
+
         g <- plot_ribbon_em(df_n = df_n, y_axis = "obs", df = df, ptitle = ptitle,
                             printplot = printplot, saveplot = saveplot)
+
+
       }
     }, error = function(e) e, warning = function(w) w)
 

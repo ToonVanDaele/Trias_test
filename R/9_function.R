@@ -10,7 +10,6 @@ get_em_levels <- function(){
 
 }
 
-
 # Map em_gam out to em
 em_gam2em <- function(em_gam, nbyear){
 
@@ -162,29 +161,34 @@ add_spec <- function(df_ts, spec_names){
 }
 
 # Apply predict and link inverse to real scale
-predict_real_scale <- function(df_pred, model) {
+predict_real_scale <- function(df_p, model) {
 
-  temp <- predict(object = model, newdata = df_pred, type = "iterms",
+  pf <- predict(object = model, newdata = df_p, type = "response",
                   interval = "prediction",
                   se.fit = TRUE)
 
-  intercept <- unname(model$coefficients[1])
-  df_pred$fit <- model$family$linkinv(temp$fit[,1] + intercept)
-  df_pred$ucl <- model$family$linkinv(temp$fit[,1] + intercept + temp$se.fit[,1] * 1.96)
-  df_pred$lcl <- model$family$linkinv(temp$fit[,1] + intercept - temp$se.fit[,1] * 1.96)
+  df_p$fit <- pf$fit
+  df_p$ucl <- pf$fit + pf$se.fit * 1.96
+  df_p$lcl <- pf$fit - pf$se.fit * 1.96
 
-  return(df_pred)
+  p1 <- predict(object = model, newdata = df_p, type = "iterms",
+                  interval = "prediction",
+                  se.fit = TRUE)
+
+  intercept <- unname(model$coefficients["(Intercept)"])
+  ulnk <- model$family$linkinv
+  df_p$s_year_fit <- ulnk(p1$fit[,"s(year)"] + intercept)
+  df_p$s_year_ucl <- ulnk(p1$fit[,"s(year)"] + intercept + p1$se.fit[,"s(year)"] * 1.96)
+  df_p$s_year_lcl <- ulnk(p1$fit[,"s(year)"] + intercept - p1$se.fit[,"s(year)"] * 1.96)
+
+  return(df_p)
 }
+
+## Predict to real scale
 
 predict_real_scale2 <- function(df_pred, model) {
 
-  temp <- predict(object = model, newdata = df_pred, type = "response",
-                  interval = "prediction",
-                  se.fit = TRUE)
 
-  df_pred$fit <- temp$fit
-  df_pred$ucl <- temp$fit + temp$se.fit * 1.96
-  df_pred$lcl <- temp$fit - temp$se.fit * 1.96
 
   return(df_pred)
 }
@@ -218,4 +222,64 @@ aggr_1to5 <- function(df){
               nb_1km = n()) %>%
     mutate(natura2000 = ifelse(n2k / nb_1km >= 0.5, TRUE, FALSE)) %>%
     select(-n2k, -nb_1km)
+}
+
+## Set title for graph of (used when ptitle = NULL)
+
+set_title <- function(df){
+
+  spec <- df[[1, "taxonKey"]]
+  spn <- spec_names %>% filter(taxonKey == spec) %>% pull(spn)
+  ptitle <- paste0(spec, "_", spn)
+  return(ptitle)
+}
+
+# Generate multiple plots for each species in a directory output/species
+
+output_multiple_plots <- function(result_sp){
+
+  if (!is.null(result_sp$df_n)){
+    df <- result_sp$df_n
+    # Create dir if necessary
+    spn_f <- set_title(df)
+    print(spn_f)
+    dir <- paste0("./output/plots/", spn_f, "/")
+    dir.create(dir, showWarnings = FALSE)
+
+    # Plot raw data
+    ptitle <- paste0(spn_f, "_raw_data")
+    pr <- plot_ts(df = df, y_axis = "obs", ptitle = ptitle)
+    ggsave(filename = paste0(dir, ptitle, ".png"), plot = pr)
+
+    # Plot raw class observation data
+    ptitle <- paste0(spn_f, "_class_obs")
+    pc <- plot_ts(df = df, y_axis = "cobs", ptitle = ptitle)
+    ggsave(filename = paste0(dir, ptitle, ".png"), plot = pc)
+
+    # Plot fit
+    ptitle <- paste0(spn_f, "_model_fit")
+    pf <- plot_ribbon_em(df_n = df, df = df, y_axis = "obs", ptitle = ptitle)
+    ggsave(filename = paste0(dir, ptitle, ".png"), plot = pf)
+
+    # Plot smoother s_year
+    ptitle <- paste0(spn_f, "_smoother_syear")
+    ps <- plot_smoother(df, ptitle)
+    ggsave(filename = paste0(dir, ptitle, ".png"), plot = ps)
+
+    # Plot first derivative
+    ptitle <- paste0(spn_f, "_syear_1st_derivative")
+    pd1 <- draw(result_sp$deriv1)
+    ggsave(filename = paste0(dir, ptitle, ".png"), plot = pd1)
+
+    # Plot second derivative
+    ptitle <- paste0(spn_f, "_syear_2nd_derivative")
+    pd2 <- draw(result_sp$deriv2)
+    ggsave(filename = paste0(dir, ptitle, ".png"), plot = pd2)
+
+    # Plot all 4 plots together
+    ptitle <- paste0(spn_f, "_plots_arranged")
+    p_ga <- arrangeGrob(pr, pc, pf, ps, pd1, pd2, ncol = 2)
+    ggsave(filename = paste0(dir, ptitle, ".png"), width = 10, height = 12, plot = p_ga)
+  }
+  return(spn_f)
 }
